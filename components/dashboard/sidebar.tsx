@@ -1,0 +1,89 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  BookOpen,
+  Sparkles,
+  Layers,
+  ClipboardCheck,
+  TrendingUp,
+  User,
+  GraduationCap,
+  Globe,
+  Target,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const links = [
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, mobileNav: true },
+  { href: "/dashboard/ielts", label: "IELTS Prep", icon: Target, mobileNav: true },
+  { href: "/dashboard/assessment", label: "Assessment", icon: ClipboardCheck, mobileNav: false },
+  { href: "/dashboard/courses", label: "Courses", icon: BookOpen, mobileNav: true },
+  { href: "/dashboard/grammar", label: "Grammar Lab", icon: Layers, mobileNav: false },
+  { href: "/dashboard/vocabulary", label: "Vocabulary", icon: Sparkles, mobileNav: true },
+  { href: "/dashboard/flashcards", label: "Flashcards", icon: Sparkles, mobileNav: false },
+  { href: "/dashboard/progress", label: "Progress", icon: TrendingUp, mobileNav: true },
+  { href: "/dashboard/profile", label: "Profile", icon: User, mobileNav: false },
+];
+
+export function DashboardSidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="hidden w-60 shrink-0 border-r border-border bg-surface lg:block">
+      <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col justify-between overflow-y-auto p-4">
+        <nav className="flex flex-col gap-1">
+          {links.map((l) => {
+            const active = l.href === "/dashboard" ? pathname === l.href : pathname.startsWith(l.href);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  active ? "bg-primary-soft text-primary" : "text-ink-soft hover:bg-primary-soft/60 hover:text-ink"
+                )}
+              >
+                <l.icon className="h-4 w-4" />
+                {l.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-ink-soft hover:bg-primary-soft/60 hover:text-ink"
+        >
+          <Globe className="h-4 w-4" /> Back to site
+        </Link>
+      </div>
+    </aside>
+  );
+}
+
+export function MobileDashboardNav() {
+  const pathname = usePathname();
+  const main = links.filter((l) => l.mobileNav);
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-surface lg:hidden">
+      {main.map((l) => {
+        const active = l.href === "/dashboard" ? pathname === l.href : pathname.startsWith(l.href);
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium",
+              active ? "text-primary" : "text-ink-soft"
+            )}
+          >
+            <l.icon className="h-4.5 w-4.5" />
+            {l.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

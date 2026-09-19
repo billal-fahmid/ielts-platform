@@ -1,0 +1,146 @@
+import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { getProfile } from "@/lib/services/users";
+import { getEstimatedBands, examCountdownDays } from "@/lib/services/ielts-dashboard";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LinkButton } from "@/components/ui/button";
+import { BandChart } from "./band-chart";
+import { Target, CalendarClock, Headphones, BookOpenCheck, PenLine, Mic, Sparkles, ArrowRight } from "lucide-react";
+
+const SKILLS = [
+  { key: "listening", label: "Listening", href: "/dashboard/ielts/listening", icon: Headphones },
+  { key: "reading", label: "Reading", href: "/dashboard/ielts/reading", icon: BookOpenCheck },
+  { key: "writing", label: "Writing", href: "/dashboard/ielts/writing", icon: PenLine },
+  { key: "speaking", label: "Speaking", href: "/dashboard/ielts/speaking", icon: Mic },
+] as const;
+
+export default async function IeltsDashboardPage() {
+  const session = await auth();
+  const userId = (session!.user as any).id;
+  const profile = getProfile(userId);
+  const bands = getEstimatedBands(userId);
+  const countdown = examCountdownDays(profile?.targetExamDate);
+
+  const chartData = SKILLS.map((s) => ({ name: s.label as string, value: bands[s.key] })).filter(
+    (d): d is { name: string; value: number } => d.value !== null
+  );
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="font-display text-2xl text-ink">IELTS Prep</h1>
+        <p className="mt-1 text-sm text-ink-soft">
+          Your estimated bands, exam countdown, and skill-by-skill progress.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={Target}
+          label="Target band"
+          value={profile?.ieltsTarget ? `Band ${profile.ieltsTarget.toFixed(1)}` : "Not set"}
+          sub={!profile?.ieltsTarget ? "Set a target in onboarding" : undefined}
+        />
+        <StatCard
+          icon={Sparkles}
+          label="Estimated band"
+          value={bands.overall !== null ? `Band ${bands.overall.toFixed(1)}` : "—"}
+          sub="AI + practice estimate"
+          tone="accent"
+        />
+        <StatCard
+          icon={CalendarClock}
+          label="Exam countdown"
+          value={countdown !== null ? (countdown >= 0 ? `${countdown} days` : "Date passed") : "Not set"}
+          sub={profile?.targetExamDate ? profile.targetExamDate : "Set your exam date"}
+        />
+        <StatCard
+          icon={BookOpenCheck}
+          label="English level"
+          value={profile?.englishLevel ?? "—"}
+          sub="From your last assessment"
+        />
+      </div>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg text-ink">Skill breakdown</h2>
+          <Badge tone="neutral">AI estimates, not official IELTS scores</Badge>
+        </div>
+        <BandChart data={chartData} />
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {SKILLS.map((s) => {
+            const value = bands[s.key];
+            return (
+              <Link
+                key={s.key}
+                href={s.href}
+                className="flex flex-col gap-2 rounded-lg border border-border p-4 transition-colors hover:border-primary"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <s.icon className="h-4.5 w-4.5" />
+                  </span>
+                  {value !== null ? (
+                    <Badge tone="primary">Band {value.toFixed(1)}</Badge>
+                  ) : (
+                    <Badge tone="neutral">Not yet assessed</Badge>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-ink">{s.label}</p>
+              </Link>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="font-display text-lg text-ink">Recommendations</h2>
+        <EmptyState
+          icon={Sparkles}
+          title="Personalized recommendations coming soon"
+          description="Once you've practiced a few skills, we'll analyze your results and suggest what to focus on next."
+          action={
+            <LinkButton href="/dashboard/assessment" variant="outline">
+              Retake assessment <ArrowRight className="h-4 w-4" />
+            </LinkButton>
+          }
+        />
+      </Card>
+    </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone = "primary",
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "primary" | "accent";
+}) {
+  return (
+    <Card className="p-5">
+      <span
+        className={
+          tone === "accent"
+            ? "flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent-dark"
+            : "flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary"
+        }
+      >
+        <Icon className="h-4.5 w-4.5" />
+      </span>
+      <p className="mt-3 text-xs font-medium uppercase tracking-wide text-ink-soft">{label}</p>
+      <p className="mt-0.5 font-display text-xl text-ink">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-ink-soft">{sub}</p>}
+    </Card>
+  );
+}
