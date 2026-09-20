@@ -502,6 +502,10 @@ export const studyPlans = sqliteTable("study_plans", {
   targetExamDate: text("target_exam_date"),
   // array of { day, focus, tasks: [{ type, refId, title, durationMinutes, completed }] }
   days: text("days", { mode: "json" }).$type<Array<Record<string, unknown>>>().default([]),
+  /** Short overview written by the AI coach; null when the plan is rule-based only. */
+  summary: text("summary"),
+  /** True once the AI coach notes were added. The plan itself is always built from rules and real content. */
+  aiAssisted: integer("ai_assisted", { mode: "boolean" }).notNull().default(false),
 });
 
 // ---------- MOCK TEST ----------
