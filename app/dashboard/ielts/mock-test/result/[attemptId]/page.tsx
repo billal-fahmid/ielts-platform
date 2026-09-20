@@ -1,3 +1,4 @@
+import { getEntitlements, hasFeature, requiredPlanFor } from "@/lib/services/plans";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -24,6 +25,8 @@ export default async function MockTestResultPage({ params }: { params: Promise<{
 
   const { listening, reading, writing, speaking, overall } = summary;
   const needsMarking = overall === null;
+  const canMark = hasFeature(getEntitlements(userId), "ADVANCED_MOCK");
+  const markingPlan = requiredPlanFor("ADVANCED_MOCK");
   const waitingOn = [writing.band === null && "Writing", speaking.band === null && "Speaking"].filter(Boolean).join(" and ");
 
   const sections = [
@@ -88,7 +91,18 @@ export default async function MockTestResultPage({ params }: { params: Promise<{
         </p>
       </Card>
 
-      {needsMarking && <FinalizeMock attemptId={attemptId} pendingLabel={waitingOn || "test"} />}
+      {needsMarking && canMark && <FinalizeMock attemptId={attemptId} pendingLabel={waitingOn || "test"} />}
+      {needsMarking && !canMark && (
+        <Card className="flex flex-col items-start gap-3 border-primary/40 p-5" data-testid="mock-upgrade">
+          <p className="text-sm text-ink">
+            Your Listening and Reading are scored above. AI marking of your Writing and Speaking is included from the <strong>{markingPlan?.name ?? "Premium"}</strong> plan, so your overall band isn&apos;t shown yet.
+            Your answers are saved: if you upgrade later, they can still be marked.
+          </p>
+          <LinkButton href="/dashboard/billing" size="sm">
+            See plans
+          </LinkButton>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {sections.map(({ key, icon: Icon, band, how, note, links }) => (

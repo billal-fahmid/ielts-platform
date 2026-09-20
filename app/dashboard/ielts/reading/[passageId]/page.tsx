@@ -1,3 +1,5 @@
+import { checkFeature } from "@/lib/plans/gate";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPassage, getQuestionsForPassage, startOrResumeAttempt } from "@/lib/services/reading";
@@ -8,6 +10,8 @@ export default async function ReadingTestPage({ params }: { params: Promise<{ pa
   const { passageId } = await params;
   const session = await auth();
   const userId = (session!.user as any).id;
+  const gate = checkFeature(userId, "IELTS_PRACTICE");
+  if (!gate.allowed) return <UpgradeWall title="IELTS Reading practice" description="Timed reading passages with every IELTS question type." requiredPlanName={gate.requiredPlanName} currentPlanName={gate.ent.plan.name} />;
 
   const passage = getPassage(passageId);
   if (!passage || !passage.published) notFound();

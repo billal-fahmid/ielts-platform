@@ -5,6 +5,7 @@ import { awardXp } from "@/lib/services/gamification";
 import { db } from "@/lib/db";
 import { lessons } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { courseIdForLesson, syncCourseCompletion } from "@/lib/services/enrollment";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -28,5 +29,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     }
   }
 
-  return NextResponse.json({ ok: true, xp: xpResult, newlyAwarded, alreadyCompleted: wasAlreadyComplete });
+  const courseId = courseIdForLesson(id);
+  const courseCompleted = courseId ? syncCourseCompletion(userId, courseId) : false;
+
+  return NextResponse.json({ ok: true, xp: xpResult, newlyAwarded, alreadyCompleted: wasAlreadyComplete, courseCompleted });
 }

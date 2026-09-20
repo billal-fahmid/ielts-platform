@@ -1,3 +1,5 @@
+import { checkFeature } from "@/lib/plans/gate";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import { auth } from "@/lib/auth";
 import { getProfile } from "@/lib/services/users";
 import { getConversation, getMessages, listConversations } from "@/lib/services/ai-tutor";
@@ -8,6 +10,8 @@ export default async function TutorPage({ searchParams }: { searchParams: Promis
   const { c } = await searchParams;
   const session = await auth();
   const userId = (session!.user as any).id;
+  const gate = checkFeature(userId, "AI_TUTOR");
+  if (!gate.allowed) return <UpgradeWall title="AI Tutor" description="The AI Tutor answers your English questions any time, in English or বাংলা." requiredPlanName={gate.requiredPlanName} currentPlanName={gate.ent.plan.name} />;
   const profile = getProfile(userId);
 
   const conversations = listConversations(userId).map((conv) => ({ id: conv.id, title: conv.title }));

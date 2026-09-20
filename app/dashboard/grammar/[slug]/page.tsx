@@ -1,3 +1,5 @@
+import { auth } from "@/lib/auth";
+import { getEntitlements, quizAllowance } from "@/lib/services/plans";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getGrammarTopicBySlug, listGrammarTopics } from "@/lib/services/grammar";
@@ -7,6 +9,9 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 
 export default async function GrammarTopicPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const session = await auth();
+  const userId = (session!.user as any).id;
+  const quizUsage = quizAllowance(userId, getEntitlements(userId));
   const topic = getGrammarTopicBySlug(slug);
   if (!topic) notFound();
 
@@ -48,6 +53,7 @@ export default async function GrammarTopicPage({ params }: { params: Promise<{ s
           <h2 className="mb-4 font-display text-lg text-ink">Practice</h2>
           <QuizSection
             quizId={quiz.id}
+            usage={{ used: quizUsage.used, limit: quizUsage.limit }}
             questions={questions.map((q) => ({ id: q.id, type: q.type, prompt: q.prompt, options: q.options }))}
           />
         </section>

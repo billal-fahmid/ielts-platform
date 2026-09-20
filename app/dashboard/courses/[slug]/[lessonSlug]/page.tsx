@@ -1,3 +1,5 @@
+import { getEntitlements, canAccessCourse, getPlanByCode, quizAllowance } from "@/lib/services/plans";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
@@ -5,9 +7,11 @@ import { getLessonBySlug, getModuleById, isLessonCompleted, isBookmarked, getLes
 import { getCourseBySlug } from "@/lib/services/courses";
 import { getQuizByLesson, getQuestions } from "@/lib/services/quiz";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Video, Volume2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Volume2 } from "lucide-react";
+import { safeMediaUrl } from "@/lib/security/http";
 import { LessonActions } from "./lesson-actions";
 import { QuizSection } from "@/components/quiz/quiz-section";
+import { enroll } from "@/lib/services/enrollment";
 
 export default async function LessonPage({
   params,
@@ -22,12 +26,22 @@ export default async function LessonPage({
   const lesson = getLessonBySlug(lessonSlug);
   if (!course || !lesson) notFound();
 
+  const ent = getEntitlements(userId);
+  if (!canAccessCourse(ent, course)) {
+    const required = getPlanByCode(course.requiredPlan);
+    return <UpgradeWall title={course.title} description="This course is part of a paid plan." requiredPlanName={required?.name ?? course.requiredPlan} currentPlanName={ent.plan.name} />;
+  }
+  enroll(userId, course.id, { silent: true }); // opening a lesson counts as joining the course
+  const quizUsage = quizAllowance(userId, ent);
+
   const module = getModuleById(lesson.moduleId);
   const siblings = module ? getLessonsForModule(module.id).sort((a, b) => a.order - b.order) : [];
   const idx = siblings.findIndex((l) => l.id === lesson.id);
   const prev = idx > 0 ? siblings[idx - 1] : null;
   const next = idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null;
 
+  const videoUrl = safeMediaUrl(lesson.videoUrl);
+  const audioUrl = safeMediaUrl(lesson.audioUrl);
   const completed = isLessonCompleted(userId, lesson.id);
   const bookmarked = isBookmarked(userId, lesson.id);
 
@@ -50,14 +64,23 @@ export default async function LessonPage({
       <h1 className="mt-2 font-display text-2xl text-ink">{lesson.title}</h1>
       <p className="mt-1.5 text-sm text-ink-soft">{lesson.description}</p>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <div className="flex items-center gap-3 rounded-lg border border-dashed border-border p-4 text-sm text-ink-soft">
-          <Video className="h-5 w-5 shrink-0" /> Video placeholder
+      {(videoUrl || audioUrl) && (
+        <div className="mt-6 flex flex-col gap-3">
+          {videoUrl && (
+            <div className="overflow-hidden rounded-xl border border-border bg-black">
+              <video src={videoUrl} controls preload="metadata" playsInline className="aspect-video w-full" aria-label={`Video: ${lesson.title}`} />
+            </div>
+          )}
+          {audioUrl && (
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <p className="mb-2 flex items-center gap-2 text-xs text-ink-soft">
+                <Volume2 className="h-4 w-4" /> Listen
+              </p>
+              <audio src={audioUrl} controls preload="none" className="w-full" aria-label={`Audio: ${lesson.title}`} />
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-3 rounded-lg border border-dashed border-border p-4 text-sm text-ink-soft">
-          <Volume2 className="h-5 w-5 shrink-0" /> Audio placeholder
-        </div>
-      </div>
+      )}
 
       <div className="prose prose-sm mt-6 max-w-none whitespace-pre-line text-[15px] leading-7 text-ink">
         {lesson.content}
@@ -83,6 +106,7 @@ export default async function LessonPage({
           <h2 className="mb-4 font-display text-lg text-ink">Check your understanding</h2>
           <QuizSection
             quizId={quiz.id}
+            usage={{ used: quizUsage.used, limit: quizUsage.limit }}
             questions={questions.map((q) => ({ id: q.id, type: q.type, prompt: q.prompt, options: q.options }))}
           />
         </div>

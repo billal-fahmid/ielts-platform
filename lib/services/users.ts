@@ -8,7 +8,7 @@ export async function createUser(name: string, email: string, password: string) 
   const existing = db.select().from(users).where(eq(users.email, email.toLowerCase())).get();
   if (existing) throw new Error("An account with this email already exists");
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 12);
   const userId = newId();
 
   db.insert(users)

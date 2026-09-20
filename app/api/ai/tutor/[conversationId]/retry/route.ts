@@ -1,3 +1,5 @@
+import { denyUnlessFeature } from "@/lib/plans/gate";
+import { aiRateLimit } from "@/lib/security/rate-limit";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { generateReply, getConversation, getMessages, isReplyInFlight } from "@/lib/services/ai-tutor";
@@ -5,10 +7,14 @@ import { generateReply, getConversation, getMessages, isReplyInFlight } from "@/
 export const maxDuration = 120;
 
 /** Asks the tutor to answer the student's last message again after a failed reply. */
-export async function POST(_req: Request, { params }: { params: Promise<{ conversationId: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ conversationId: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const userId = (session.user as any).id;
+  const denied = denyUnlessFeature(userId, "AI_TUTOR");
+  if (denied) return denied;
+  const limited = aiRateLimit(req, userId);
+  if (limited) return limited;
 
   const { conversationId } = await params;
   const conversation = getConversation(conversationId);

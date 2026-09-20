@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RotateCw, PartyPopper } from "lucide-react";
+import Link from "next/link";
+import { RotateCw, PartyPopper, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,20 @@ export function FlashcardDeck({ words }: { words: Word[] }) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [limitMessage, setLimitMessage] = useState<string | null>(null);
+
+  if (limitMessage) {
+    return (
+      <div role="status" className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface p-10 text-center" data-testid="vocab-limit">
+        <Lock className="h-8 w-8 text-primary" />
+        <p className="font-display text-lg text-ink">Daily word limit reached</p>
+        <p className="text-sm text-ink-soft">{limitMessage}</p>
+        <Link href="/dashboard/billing" className="text-sm font-medium text-primary hover:underline">
+          See plans
+        </Link>
+      </div>
+    );
+  }
 
   if (words.length === 0) {
     return (
@@ -45,12 +60,17 @@ export function FlashcardDeck({ words }: { words: Word[] }) {
 
   const rate = async (rating: "easy" | "medium" | "hard") => {
     setLoading(true);
-    await fetch(`/api/vocabulary/${w.id}/action`, {
+    const res = await fetch(`/api/vocabulary/${w.id}/action`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: rating }),
     });
     setLoading(false);
+    if (res.status === 402) {
+      const data = await res.json().catch(() => null);
+      setLimitMessage(data?.error ?? "You've reached today's limit of new words.");
+      return;
+    }
     setFlipped(false);
     setIndex((i) => i + 1);
   };

@@ -1,3 +1,5 @@
+import { denyUnlessFeature } from "@/lib/plans/gate";
+import { aiRateLimit } from "@/lib/security/rate-limit";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
@@ -21,6 +23,10 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const userId = (session.user as any).id;
+  const denied = denyUnlessFeature(userId, "AI_TUTOR");
+  if (denied) return denied;
+  const limited = aiRateLimit(req, userId);
+  if (limited) return limited;
 
   const body = await req.json().catch(() => null);
   const message = typeof body?.message === "string" ? body.message.trim() : "";

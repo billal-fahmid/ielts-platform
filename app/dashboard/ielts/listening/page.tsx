@@ -1,3 +1,5 @@
+import { checkFeature } from "@/lib/plans/gate";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { listPublishedTests, getSections, getQuestionsForTest, recentListeningAttempts } from "@/lib/services/listening";
@@ -9,6 +11,8 @@ import { Headphones, Clock, ListChecks } from "lucide-react";
 export default async function ListeningListPage() {
   const session = await auth();
   const userId = (session!.user as any).id;
+  const gate = checkFeature(userId, "IELTS_PRACTICE");
+  if (!gate.allowed) return <UpgradeWall title="IELTS Listening practice" description="Timed listening tests with band estimates and full transcripts." requiredPlanName={gate.requiredPlanName} currentPlanName={gate.ent.plan.name} />;
 
   const tests = listPublishedTests();
   const attempts = recentListeningAttempts(userId, 50); // most-recent-first

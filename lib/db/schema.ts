@@ -3,6 +3,8 @@ import {
   text,
   integer,
   real,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -42,6 +44,8 @@ export const profiles = sqliteTable("profiles", {
   streak: integer("streak").notNull().default(0),
   lastStudyDate: text("last_study_date"),
   dailyGoalMinutes: integer("daily_goal_minutes").notNull().default(20),
+  /** Whether important notifications are also sent by email. In-app notifications are always on. */
+  emailNotifications: integer("email_notifications", { mode: "boolean" }).notNull().default(true),
 });
 
 // ---------- COURSES ----------
@@ -53,10 +57,12 @@ export const courses = sqliteTable("courses", {
   category: text("category", {
     enum: ["BEGINNER", "ELEMENTARY", "INTERMEDIATE", "ADVANCED"],
   }).notNull(),
-  track: text("track", { enum: ["ENGLISH", "IELTS"] }).notNull().default("ENGLISH"),
+  track: text("track", { enum: ["ENGLISH", "IELTS", "CAREER"] }).notNull().default("ENGLISH"),
   image: text("image"),
   order: integer("order").notNull().default(0),
   published: integer("published", { mode: "boolean" }).notNull().default(true),
+  /** Code of the cheapest plan that can open this course (see plans). */
+  requiredPlan: text("required_plan").notNull().default("FREE"),
 });
 
 export const modules = sqliteTable("modules", {
@@ -548,6 +554,155 @@ export const mockTestAttempts = sqliteTable("mock_test_attempts", {
   startedAt: text("started_at").default(sql`(CURRENT_TIMESTAMP)`),
   completedAt: text("completed_at"),
 });
+
+// ---------- PLATFORM: OPERATIONS & SECURITY ----------
+export const auditLogs = sqliteTable(
+  "audit_logs",
+  {
+    id: text("id").primaryKey(),
+    actorId: text("actor_id"),
+    actorRole: text("actor_role"),
+    /** e.g. "resource.update", "user.role_change", "notification.broadcast" */
+    action: text("action").notNull(),
+    entityType: text("entity_type"),
+    entityId: text("entity_id"),
+    metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>().default({}),
+    ip: text("ip"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("audit_logs_created_idx").on(t.createdAt), index("audit_logs_actor_idx").on(t.actorId), index("audit_logs_entity_idx").on(t.entityType, t.entityId)]
+);
+
+export const errorLogs = sqliteTable(
+  "error_logs",
+  {
+    id: text("id").primaryKey(),
+    /** Where it happened: "server", "api", "client", a route path... */
+    source: text("source").notNull(),
+    message: text("message").notNull(),
+    stack: text("stack"),
+    path: text("path"),
+    method: text("method"),
+    userId: text("user_id"),
+    digest: text("digest"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("error_logs_created_idx").on(t.createdAt)]
+);
+
+export const emailMessages = sqliteTable(
+  "email_messages",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id"),
+    toEmail: text("to_email").notNull(),
+    subject: text("subject").notNull(),
+    bodyText: text("body_text").notNull(),
+    bodyHtml: text("body_html"),
+    /** OUTBOX = not sent because no email provider is configured (development). */
+    status: text("status", { enum: ["SENT", "FAILED", "OUTBOX"] }).notNull(),
+    provider: text("provider").notNull(),
+    error: text("error"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("email_messages_created_idx").on(t.createdAt)]
+);
+
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    type: text("type", {
+      enum: ["COURSE", "TEACHER_FEEDBACK", "LIVE_CLASS", "ASSIGNMENT", "PAYMENT", "SUBSCRIPTION", "STREAK", "ACHIEVEMENT", "COMMUNITY", "SYSTEM"],
+    }).notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+    /** Internal link to open when the notification is clicked. */
+    url: text("url"),
+    readAt: text("read_at"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("notifications_user_created_idx").on(t.userId, t.createdAt), index("notifications_user_read_idx").on(t.userId, t.readAt)]
+);
+
+export const uploadedFiles = sqliteTable(
+  "uploaded_files",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    kind: text("kind", { enum: ["VIDEO", "AUDIO", "IMAGE", "DOCUMENT"] }).notNull(),
+    originalName: text("original_name").notNull(),
+    contentType: text("content_type").notNull(),
+    size: integer("size").notNull(),
+    storageKey: text("storage_key").notNull().unique(),
+    /** PUBLIC = anyone with the link; MEMBERS = signed-in users; PRIVATE = owner and staff only. */
+    visibility: text("visibility", { enum: ["PUBLIC", "MEMBERS", "PRIVATE"] }).notNull().default("MEMBERS"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("uploaded_files_owner_idx").on(t.ownerId)]
+);
+
+// ---------- COURSE ENROLLMENT ----------
+export const enrollments = sqliteTable(
+  "enrollments",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    courseId: text("course_id").notNull(),
+    status: text("status", { enum: ["ACTIVE", "COMPLETED", "DROPPED"] }).notNull().default("ACTIVE"),
+    enrolledAt: text("enrolled_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    completedAt: text("completed_at"),
+  },
+  (t) => [uniqueIndex("enrollments_user_course_uq").on(t.userId, t.courseId), index("enrollments_course_idx").on(t.courseId)]
+);
+
+// ---------- SUBSCRIPTION PLANS ----------
+export const plans = sqliteTable("plans", {
+  id: text("id").primaryKey(),
+  /** FREE, BASIC, PREMIUM or PRO. The ladder is fixed; everything else about a plan is editable. */
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  /** Prices in Bangladeshi taka (whole taka). */
+  priceMonthly: integer("price_monthly").notNull().default(0),
+  priceYearly: integer("price_yearly"),
+  /** Feature keys this plan unlocks (see lib/plans/features.ts). */
+  features: text("features", { mode: "json" }).$type<string[]>().notNull().default([]),
+  /** Marketing bullet points shown on the pricing page. */
+  bullets: text("bullets", { mode: "json" }).$type<string[]>().notNull().default([]),
+  /** Daily limits. Empty means unlimited. */
+  vocabPerDay: integer("vocab_per_day"),
+  quizzesPerDay: integer("quizzes_per_day"),
+  /** Higher rank means a higher plan. Used to decide whether a plan covers a course. */
+  rank: integer("rank").notNull().default(0),
+  highlighted: integer("highlighted", { mode: "boolean" }).notNull().default(false),
+  /** Shown on the pricing page and open for new purchases. */
+  published: integer("published", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const subscriptions = sqliteTable(
+  "subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    planId: text("plan_id").notNull(),
+    status: text("status", { enum: ["ACTIVE", "EXPIRED", "CANCELLED"] }).notNull().default("ACTIVE"),
+    /** How it started: an administrator granted it, a payment completed, or a promotion. */
+    source: text("source", { enum: ["ADMIN", "PAYMENT", "PROMO"] }).notNull().default("ADMIN"),
+    startedAt: text("started_at").notNull(),
+    /** ISO time the paid period ends. Access stops after this moment. */
+    currentPeriodEnd: text("current_period_end").notNull(),
+    cancelledAt: text("cancelled_at"),
+    /** Set once the "ending soon" reminder has been sent. */
+    reminderSentAt: text("reminder_sent_at"),
+    /** The payment transaction that created it (filled in by the payment system). */
+    transactionId: text("transaction_id"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("subscriptions_user_idx").on(t.userId, t.status), index("subscriptions_end_idx").on(t.currentPeriodEnd)]
+);
 
 // ---------- RELATIONS (for query convenience) ----------
 export const usersRelations = relations(users, ({ one, many }) => ({

@@ -1,3 +1,5 @@
+import { checkFeature } from "@/lib/plans/gate";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { listUserSessions, getEvaluation } from "@/lib/services/speaking";
@@ -22,6 +24,8 @@ const MODE_LABELS: Record<string, string> = {
 export default async function SpeakingListPage() {
   const session = await auth();
   const userId = (session!.user as any).id;
+  const gate = checkFeature(userId, "AI_SPEAKING");
+  if (!gate.allowed) return <UpgradeWall title="IELTS Speaking practice" description="Practise with an AI examiner and get feedback on your answers." requiredPlanName={gate.requiredPlanName} currentPlanName={gate.ent.plan.name} />;
   const sessions = listUserSessions(userId, 8).map((s) => ({ ...s, evaluation: getEvaluation(s.id) }));
 
   return (

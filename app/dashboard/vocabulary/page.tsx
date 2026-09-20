@@ -1,3 +1,5 @@
+import { getEntitlements, vocabularyWordsToday } from "@/lib/services/plans";
+import { DailyLimitBanner } from "@/components/plans/daily-limit-banner";
 import { auth } from "@/lib/auth";
 import { listVocabulary, getUserVocabMap, myVocabulary } from "@/lib/services/vocabulary";
 import { VocabularyTabs } from "./vocabulary-tabs";
@@ -5,6 +7,8 @@ import { VocabularyTabs } from "./vocabulary-tabs";
 export default async function VocabularyPage() {
   const session = await auth();
   const userId = (session!.user as any).id;
+  const ent = getEntitlements(userId);
+  const vocabUsage = { used: vocabularyWordsToday(userId).length, limit: ent.staff ? null : ent.plan.vocabPerDay };
 
   const daily = listVocabulary("DAILY");
   const ielts = listVocabulary("IELTS");
@@ -19,6 +23,7 @@ export default async function VocabularyPage() {
     <div>
       <h1 className="font-display text-2xl text-ink">Vocabulary</h1>
       <p className="mt-1 text-sm text-ink-soft">Build your word bank, one word at a time.</p>
+      <DailyLimitBanner what="words" used={vocabUsage.used} limit={vocabUsage.limit} />
 
       <VocabularyTabs
         daily={serialize(daily)}

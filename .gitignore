@@ -47,3 +47,6 @@ data.db-wal
 
 # local Claude Code settings (machine-specific)
 .claude/settings.local.json
+
+# uploaded course media (see lib/storage)
+/uploads/

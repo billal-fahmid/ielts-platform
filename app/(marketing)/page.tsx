@@ -14,6 +14,7 @@ import {
   Award,
 } from "lucide-react";
 import { LinkButton } from "@/components/ui/button";
+import { TRACK_LABELS, trackTone } from "@/lib/courses/tracks";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BandDial } from "@/components/marketing/band-dial";
@@ -137,7 +138,7 @@ export default function HomePage() {
             {courses.map((c) => (
               <Link key={c.id} href={`/courses/${c.slug}`}>
                 <Card className="h-full p-5 transition-shadow hover:shadow-md">
-                  <Badge tone={c.track === "IELTS" ? "accent" : "primary"}>{c.track}</Badge>
+                  <Badge tone={trackTone(c.track)}>{TRACK_LABELS[c.track]}</Badge>
                   <h3 className="mt-3 font-display text-lg text-ink">{c.title}</h3>
                   <p className="mt-1.5 text-sm text-ink-soft line-clamp-2">{c.description}</p>
                   <p className="mt-4 text-xs font-medium uppercase tracking-wide text-ink-soft">

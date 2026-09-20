@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Flame, Zap, Moon, Sun, GraduationCap, LogOut } from "lucide-react";
+import { Flame, Zap, Moon, Sun, GraduationCap, LogOut, User, TrendingUp, Bell, ShieldCheck, Crown } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useTheme } from "@/components/theme-provider";
 import { useState } from "react";
 import { gLevelFromXp } from "@/lib/utils";
@@ -10,9 +11,13 @@ import { gLevelFromXp } from "@/lib/utils";
 export function DashboardTopbar({
   profile,
   userName,
+  unreadNotifications = 0,
+  role = "STUDENT",
 }: {
   profile: { xp: number; gLevel: number; streak: number } | undefined;
   userName: string;
+  unreadNotifications?: number;
+  role?: string;
 }) {
   const { theme, toggle } = useTheme();
   const [menu, setMenu] = useState(false);
@@ -43,18 +48,39 @@ export function DashboardTopbar({
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
+        <NotificationBell initialUnread={unreadNotifications} />
         <div className="relative">
           <button
             onClick={() => setMenu((v) => !v)}
+            aria-label="Account menu"
+            aria-haspopup="true"
+            aria-expanded={menu}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-medium text-white"
           >
             {userName[0]?.toUpperCase()}
           </button>
           {menu && (
             <div
-              className="absolute right-0 mt-2 w-44 rounded-lg border border-border bg-surface p-1.5 shadow-lg"
+              className="absolute right-0 mt-2 w-52 rounded-lg border border-border bg-surface p-1.5 shadow-lg"
               onMouseLeave={() => setMenu(false)}
             >
+              <Link href="/dashboard/profile" onClick={() => setMenu(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-primary-soft">
+                <User className="h-4 w-4" /> Profile
+              </Link>
+              <Link href="/dashboard/progress" onClick={() => setMenu(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-primary-soft">
+                <TrendingUp className="h-4 w-4" /> Progress
+              </Link>
+              <Link href="/dashboard/billing" onClick={() => setMenu(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-primary-soft">
+                <Crown className="h-4 w-4" /> My plan
+              </Link>
+              <Link href="/dashboard/notifications" onClick={() => setMenu(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-primary-soft">
+                <Bell className="h-4 w-4" /> Notifications
+              </Link>
+              {(role === "ADMIN" || role === "TEACHER") && (
+                <Link href="/admin" onClick={() => setMenu(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-primary-soft">
+                  <ShieldCheck className="h-4 w-4" /> {role === "ADMIN" ? "Admin panel" : "Teaching"}
+                </Link>
+              )}
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger-soft"

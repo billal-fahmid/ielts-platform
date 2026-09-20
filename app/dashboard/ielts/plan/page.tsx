@@ -1,3 +1,5 @@
+import { checkFeature } from "@/lib/plans/gate";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getLatestPlan, todaysDay } from "@/lib/services/study-plan";
@@ -28,6 +30,8 @@ function formatDay(iso: string) {
 export default async function StudyPlanPage() {
   const session = await auth();
   const userId = (session!.user as any).id;
+  const gate = checkFeature(userId, "IELTS_PRACTICE");
+  if (!gate.allowed) return <UpgradeWall title="Your 7-day study plan" description="A week of practice built from your own results." requiredPlanName={gate.requiredPlanName} currentPlanName={gate.ent.plan.name} />;
   const plan = getLatestPlan(userId);
 
   if (!plan) {

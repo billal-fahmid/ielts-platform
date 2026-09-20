@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { courses, modules, lessons, progress, bookmarks } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 
-export function listCourses(track?: "ENGLISH" | "IELTS") {
+export function listCourses(track?: "ENGLISH" | "IELTS" | "CAREER") {
   const all = db.select().from(courses).where(eq(courses.published, true)).all();
   return track ? all.filter((c) => c.track === track) : all;
 }

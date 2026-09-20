@@ -1,3 +1,4 @@
+import { getPlanByCode } from "@/lib/services/plans";
 import { Metadata } from "next";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -5,7 +6,10 @@ import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = { title: "Contact — BanglaEnglish" };
 
-export default function ContactPage() {
+export default async function ContactPage({ searchParams }: { searchParams: Promise<{ plan?: string; period?: string }> }) {
+  const { plan, period } = await searchParams;
+  const planRow = plan ? getPlanByCode(plan.toUpperCase().slice(0, 20)) : undefined;
+  const defaultMessage = planRow && planRow.rank > 0 ? `Hello, I would like to upgrade to the ${planRow.name} plan (${period === "yearly" ? "yearly" : "monthly"}). Please tell me how to pay.` : "";
   return (
     <div className="container-page grid gap-10 py-16 lg:grid-cols-[0.9fr_1.1fr]">
       <div>
@@ -22,7 +26,7 @@ export default function ContactPage() {
         </div>
       </div>
       <Card className="p-6 sm:p-8">
-        <ContactForm />
+        <ContactForm defaultMessage={defaultMessage} />
       </Card>
     </div>
   );

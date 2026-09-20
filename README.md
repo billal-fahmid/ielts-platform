@@ -116,8 +116,7 @@ lib/
   in `lib/auth.ts`)
 - Real audio/video files (lessons have clearly marked placeholders, per
   the spec's "video placeholder" / "audio placeholder" requirement)
-- Sending real emails for the contact form / password reset (currently
-  logs to the server console — see `app/api/contact/route.ts`)
+- Password reset by email (the email layer below is ready for it)
 
 ## AI features and providers
 
@@ -138,6 +137,25 @@ Writing feedback, speaking feedback and the AI tutor all go through one provider
 - With no key set, the AI features show "unavailable" and the rest of the app works normally. `GET /api/ai/health` (signed in) reports which provider is active and whether it responds.
 - Free tiers have rate limits, and some providers may use content sent to their free tier to improve their models. That is fine for development and demos; check the provider's terms before using it with real students' essays or recordings' transcripts.
 - Scores from any provider are AI estimates, never official IELTS scores.
+
+## Security, email, uploads and notifications (Milestone 3)
+
+- **Roles:** `lib/security/guards.ts` (`requireUser`, `requireRole`, `requirePageRole`). Teachers can manage content but never accounts or roles; administrator-only pages are hidden from them.
+- **CSRF and rate limits:** `proxy.ts` rejects cross-site state-changing API calls. `lib/security/rate-limit.ts` limits registration, login guessing, contact, uploads and AI endpoints (in memory, per server process; swap the store for Redis if you run several servers). Behind a reverse proxy set `TRUST_PROXY=true` so client IPs are read correctly.
+- **Audit and error logs:** admin changes, uploads, role changes and announcements are recorded (secrets are stripped) and unexpected errors are saved with keys masked. Read them at `/admin/audit-logs` and `/admin/error-logs`.
+- **Email:** `lib/email/`. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `EMAIL_FROM` to send real email (works with any SMTP service). With no SMTP settings, emails are stored and shown at `/admin/email-outbox` instead of being sent. `SUPPORT_EMAIL` receives contact-form messages (defaults to the first admin).
+- **Uploads:** `lib/storage/` behind a `StorageProvider` interface (local disk today; add an S3/R2 provider later). Files go to `UPLOAD_DIR` (default `./uploads`, keep it on a persistent volume and out of git). The real file type is checked from its bytes; SVG, HTML and executables are refused; files are served through `/api/files/<id>` with access checks and range support.
+- **Notifications:** in-app bell and centre for every student, optional email copies (each student can turn email off), and admin announcements at `/admin/notifications`.
+- `APP_URL` sets the site address used in email links. `RATE_LIMIT_DISABLED=true` switches limits off for automated tests (ignored in production).
+
+## Plans, pricing and access (Milestone 3)
+
+- **Four plans** (FREE, BASIC, PREMIUM, PRO) live in the database and are edited at `/admin/plans`: names, prices in taka, the features each plan unlocks, marketing bullets and daily limits. The public `/pricing` page and every locked screen read from there.
+- **Enforcement:** `lib/services/plans.ts` (`getEntitlements`, `hasFeature`, `canAccessCourse`) plus `lib/plans/gate.ts` (`requireFeature`, `denyUnlessFeature` return HTTP 402; pages show `UpgradeWall`). Feature keys are in `lib/plans/features.ts`. Teachers and admins can open everything.
+- **Free-plan limits** (new vocabulary words and quizzes per day) reset at midnight in Dhaka.
+- **Courses** have a "cheapest plan that includes it" setting in the course admin.
+- **Subscriptions:** `/admin/subscriptions` grants, extends and ends plans. Plans end on their own; students get a reminder three days before and a notice when it ends. Until online payments are switched on, the Upgrade buttons lead to the contact form pre-filled with the plan (`lib/plans/checkout.ts`).
+- Existing installs: every account without a subscription is on the Free plan. Grant the plans your current students should keep from `/admin/subscriptions`.
 
 ## Scripts
 

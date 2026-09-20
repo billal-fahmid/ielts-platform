@@ -1,3 +1,4 @@
+import { denyUnlessFeature } from "@/lib/plans/gate";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { beginSection, getMockAttempt } from "@/lib/services/mock-test";
@@ -7,6 +8,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const userId = (session.user as any).id;
+  const denied = denyUnlessFeature(userId, "MOCK_TESTS");
+  if (denied) return denied;
 
   const { id } = await params;
   const attempt = getMockAttempt(id);

@@ -2,10 +2,15 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getCourseFullTree, isLessonCompleted, getUserProgressForCourse } from "@/lib/services/courses";
+import { isEnrolled, getEnrollment } from "@/lib/services/enrollment";
+import { EnrollButton } from "@/components/courses/enroll-button";
+import { TRACK_LABELS, trackTone } from "@/lib/courses/tracks";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
-import { CheckCircle2, Circle, PlayCircle } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, Lock } from "lucide-react";
+import { LinkButton } from "@/components/ui/button";
+import { getEntitlements, canAccessCourse, getPlanByCode } from "@/lib/services/plans";
 
 export default async function DashboardCourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -16,15 +21,36 @@ export default async function DashboardCourseDetailPage({ params }: { params: Pr
   if (!course) notFound();
 
   const progress = getUserProgressForCourse(userId, course.id);
+  const enrolled = isEnrolled(userId, course.id);
+  const ent = getEntitlements(userId);
+  const locked = !canAccessCourse(ent, course);
+  const requiredPlan = getPlanByCode(course.requiredPlan);
+  const completedOn = getEnrollment(userId, course.id)?.completedAt;
 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center gap-2">
-        <Badge tone={course.track === "IELTS" ? "accent" : "primary"}>{course.track}</Badge>
+        <Badge tone={trackTone(course.track)}>{TRACK_LABELS[course.track]}</Badge>
         <Badge tone="neutral">{course.category}</Badge>
       </div>
       <h1 className="mt-3 font-display text-2xl text-ink">{course.title}</h1>
       <p className="mt-1.5 text-sm text-ink-soft">{course.description}</p>
+      <div className="mt-4">
+        {locked ? (
+          <div className="flex flex-col items-start gap-2 rounded-xl border border-border bg-surface p-4" data-testid="course-locked">
+            <p className="flex items-center gap-2 text-sm font-medium text-ink">
+              <Lock className="h-4 w-4 text-primary" /> Included from the {requiredPlan?.name ?? course.requiredPlan} plan
+            </p>
+            <p className="text-xs text-ink-soft">You&apos;re on the {ent.plan.name} plan.</p>
+            <LinkButton href="/dashboard/billing" size="sm">
+              See plans
+            </LinkButton>
+          </div>
+        ) : (
+          <EnrollButton courseId={course.id} courseSlug={course.slug} enrolled={enrolled} size="md" />
+        )}
+        {completedOn && <p className="mt-2 text-xs text-success">Completed on {new Date(completedOn).toLocaleDateString()}</p>}
+      </div>
 
       <Card className="mt-5 p-5">
         <div className="flex items-center justify-between text-sm">

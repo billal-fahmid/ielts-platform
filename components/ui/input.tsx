@@ -50,12 +50,25 @@ export function Field({
   error,
   children,
   hint,
+  group,
 }: {
   label: string;
   error?: string;
   hint?: string;
   children: React.ReactNode;
+  /** For a set of checkboxes: a labelled group instead of a single <label> (labels can't be nested). */
+  group?: boolean;
 }) {
+  if (group) {
+    return (
+      <div role="group" aria-label={label} className="block">
+        <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
+        {children}
+        {hint && !error && <span className="mt-1 block text-xs text-ink-soft">{hint}</span>}
+        {error && <span className="mt-1 block text-xs text-danger">{error}</span>}
+      </div>
+    );
+  }
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>

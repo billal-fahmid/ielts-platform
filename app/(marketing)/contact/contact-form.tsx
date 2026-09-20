@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useState } from "react";
 
-export function ContactForm() {
+export function ContactForm({ defaultMessage = "" }: { defaultMessage?: string }) {
   const { push } = useToast();
   const [loading, setLoading] = useState(false);
   const {
@@ -16,7 +16,7 @@ export function ContactForm() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<ContactInput>({ resolver: zodResolver(contactSchema) });
+  } = useForm<ContactInput>({ resolver: zodResolver(contactSchema), defaultValues: { message: defaultMessage } });
 
   const onSubmit = async (data: ContactInput) => {
     setLoading(true);

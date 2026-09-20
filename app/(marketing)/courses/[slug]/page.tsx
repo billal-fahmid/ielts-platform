@@ -1,15 +1,31 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCourseFullTree } from "@/lib/services/courses";
+import { Metadata } from "next";
+import { auth } from "@/lib/auth";
+import { getCourseFullTree, getCourseBySlug } from "@/lib/services/courses";
+import { isEnrolled } from "@/lib/services/enrollment";
+import { EnrollButton } from "@/components/courses/enroll-button";
+import { TRACK_LABELS, trackTone } from "@/lib/courses/tracks";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { BookOpen, PlayCircle, Lock } from "lucide-react";
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const course = getCourseBySlug(slug);
+  if (!course || !course.published) return { title: "Course not found — BanglaEnglish" };
+  return { title: `${course.title} — BanglaEnglish`, description: course.description };
+}
+
 export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const course = getCourseFullTree(slug);
-  if (!course) notFound();
+  if (!course || !course.published) notFound();
+
+  const session = await auth();
+  const userId = (session?.user as any)?.id as string | undefined;
+  const enrolled = userId ? isEnrolled(userId, course.id) : false;
 
   const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0);
 
@@ -18,7 +34,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
       <section className="border-b border-border bg-surface py-14">
         <div className="container-page max-w-2xl">
           <div className="flex items-center gap-2">
-            <Badge tone={course.track === "IELTS" ? "accent" : "primary"}>{course.track}</Badge>
+            <Badge tone={trackTone(course.track)}>{TRACK_LABELS[course.track]}</Badge>
             <Badge tone="neutral">{course.category}</Badge>
           </div>
           <h1 className="mt-3 font-display text-3xl text-ink sm:text-4xl">{course.title}</h1>
@@ -27,9 +43,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
             {course.modules.length} modules · {totalLessons} lessons
           </p>
           <div className="mt-6">
-            <LinkButton href="/register" size="lg">
-              Enroll for free
-            </LinkButton>
+            {userId ? (
+              <EnrollButton courseId={course.id} courseSlug={course.slug} enrolled={enrolled} />
+            ) : (
+              <LinkButton href="/register" size="lg">
+                Enroll for free
+              </LinkButton>
+            )}
           </div>
         </div>
       </section>
@@ -64,9 +84,15 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
         <Card className="flex flex-col items-center gap-3 p-10 text-center">
           <BookOpen className="h-8 w-8 text-primary" />
           <h2 className="font-display text-xl text-ink">Ready to start "{course.title}"?</h2>
-          <LinkButton href="/register" size="lg">
-            Create a free account
-          </LinkButton>
+          {userId ? (
+            <LinkButton href={`/dashboard/courses/${course.slug}`} size="lg">
+              Open the course
+            </LinkButton>
+          ) : (
+            <LinkButton href="/register" size="lg">
+              Create a free account
+            </LinkButton>
+          )}
         </Card>
       </section>
     </div>

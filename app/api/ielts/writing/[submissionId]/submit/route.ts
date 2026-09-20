@@ -1,3 +1,5 @@
+import { denyUnlessFeature } from "@/lib/plans/gate";
+import { aiRateLimit } from "@/lib/security/rate-limit";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { evaluateSubmission, getSubmission, markSubmitted } from "@/lib/services/writing";
@@ -10,6 +12,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ submiss
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const userId = (session.user as any).id;
+  const denied = denyUnlessFeature(userId, "AI_WRITING");
+  if (denied) return denied;
+  const limited = aiRateLimit(req, userId);
+  if (limited) return limited;
 
   const { submissionId } = await params;
   const submission = getSubmission(submissionId);

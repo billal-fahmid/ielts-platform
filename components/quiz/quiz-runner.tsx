@@ -35,6 +35,7 @@ export function QuizRunner({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const q = questions[index];
   const isLast = index === questions.length - 1;
@@ -44,10 +45,16 @@ export function QuizRunner({
 
   const submit = async () => {
     setSubmitting(true);
-    const res = await onSubmit(answers);
-    setSubmitting(false);
-    setResult(res);
-    onFinish?.(res);
+    setError(null);
+    try {
+      const res = await onSubmit(answers);
+      setResult(res);
+      onFinish?.(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "We couldn't submit your quiz. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const retry = () => {
@@ -154,6 +161,11 @@ export function QuizRunner({
         )}
       </div>
 
+      {error && (
+        <p role="alert" className="mt-5 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
       <div className="mt-7 flex items-center justify-between">
         <Button variant="ghost" onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}>
           <ChevronLeft className="h-4 w-4" /> Back

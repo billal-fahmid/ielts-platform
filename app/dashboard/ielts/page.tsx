@@ -1,3 +1,4 @@
+import { getEntitlements, hasFeature } from "@/lib/services/plans";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getProfile } from "@/lib/services/users";
@@ -31,6 +32,7 @@ export default async function IeltsDashboardPage() {
   const plan = getLatestPlan(userId);
   const todayPlan = plan ? todaysDay(plan) : null;
   const planStats = plan ? planProgress(plan.days) : null;
+  const canPlan = hasFeature(getEntitlements(userId), "IELTS_PRACTICE");
 
   const chartData = SKILLS.map((s) => ({ name: s.label as string, value: bands[s.key] })).filter(
     (d): d is { name: string; value: number } => d.value !== null
@@ -130,7 +132,14 @@ export default async function IeltsDashboardPage() {
             </Link>
           )}
         </div>
-        {!plan ? (
+        {!canPlan ? (
+          <EmptyState
+            icon={CalendarCheck}
+            title="Study plans are part of a paid plan"
+            description="Upgrade to get seven days of practice built around your results, target band and daily goal."
+            action={<LinkButton href="/dashboard/billing">See plans</LinkButton>}
+          />
+        ) : !plan ? (
           <EmptyState
             icon={CalendarCheck}
             title="Get a plan built around your results"

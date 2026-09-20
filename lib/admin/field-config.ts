@@ -1,8 +1,16 @@
+import { PLAN_FEATURES, FEATURE_LABELS, PLAN_CODES } from "@/lib/plans/features";
+
 export type FieldConfig = {
   key: string;
   label: string;
-  type: "text" | "textarea" | "number" | "select" | "checkbox" | "json-list" | "relation" | "relation-multi";
+  type: "text" | "textarea" | "number" | "select" | "checkbox" | "json-list" | "relation" | "relation-multi" | "multi-select";
   options?: string[];
+  /** For "multi-select": readable names for the option values. */
+  optionLabels?: Record<string, string>;
+  /** Shown but can't be changed once the record exists. */
+  readOnly?: boolean;
+  /** For numbers: an empty box saves "no value" (for example, no daily limit). */
+  nullable?: boolean;
   required?: boolean;
   /** Small helper text under the field. */
   hint?: string;
@@ -13,10 +21,15 @@ export type FieldConfig = {
    * `labelKey` is the column shown to the admin; `filter` limits the choices to records whose column equals the value.
    */
   relation?: { resource: string; labelKey: string; filter?: { key: string; value: string } };
+  /** For type "text": also offer to upload a file, and fill the field with its link. */
+  upload?: { kinds: ("VIDEO" | "AUDIO" | "IMAGE" | "DOCUMENT")[]; visibility?: "PUBLIC" | "MEMBERS" };
 };
 
 export type ResourceMeta = {
   label: string;
+  /** Set to false for fixed lists such as the four subscription plans. */
+  canCreate?: boolean;
+  canDelete?: boolean;
   fields: FieldConfig[];
   listColumns: string[];
 };
@@ -24,13 +37,14 @@ export type ResourceMeta = {
 export const resourceMeta: Record<string, ResourceMeta> = {
   courses: {
     label: "Courses",
-    listColumns: ["title", "category", "track", "published"],
+    listColumns: ["title", "category", "track", "requiredPlan", "published"],
     fields: [
       { key: "title", label: "Title", type: "text", required: true },
       { key: "description", label: "Description", type: "textarea", required: true },
       { key: "category", label: "Category", type: "select", options: ["BEGINNER", "ELEMENTARY", "INTERMEDIATE", "ADVANCED"], required: true },
-      { key: "track", label: "Track", type: "select", options: ["ENGLISH", "IELTS"], required: true },
-      { key: "image", label: "Image path", type: "text" },
+      { key: "track", label: "Track", type: "select", options: ["ENGLISH", "IELTS", "CAREER"], required: true },
+      { key: "requiredPlan", label: "Cheapest plan that includes it", type: "select", options: [...PLAN_CODES], required: true, hint: "Students on a lower plan see it as locked." },
+      { key: "image", label: "Image path", type: "text", upload: { kinds: ["IMAGE"], visibility: "PUBLIC" } },
       { key: "order", label: "Order", type: "number" },
       { key: "published", label: "Published", type: "checkbox" },
     ],
@@ -52,8 +66,8 @@ export const resourceMeta: Record<string, ResourceMeta> = {
       { key: "title", label: "Title", type: "text", required: true },
       { key: "description", label: "Description", type: "textarea" },
       { key: "content", label: "Content", type: "textarea", required: true },
-      { key: "videoUrl", label: "Video URL", type: "text" },
-      { key: "audioUrl", label: "Audio URL", type: "text" },
+      { key: "videoUrl", label: "Video URL", type: "text", upload: { kinds: ["VIDEO"] } },
+      { key: "audioUrl", label: "Audio URL", type: "text", upload: { kinds: ["AUDIO"] } },
       { key: "xpReward", label: "XP Reward", type: "number" },
       { key: "order", label: "Order", type: "number" },
     ],
@@ -157,7 +171,7 @@ export const resourceMeta: Record<string, ResourceMeta> = {
     fields: [
       { key: "listeningTestId", label: "Listening test", type: "relation", relation: { resource: "listeningTests", labelKey: "title" }, required: true },
       { key: "sectionNumber", label: "Section number (1-4)", type: "number", required: true },
-      { key: "audioUrl", label: "Audio path or URL", type: "text", required: true, hint: "For example /audio/listening/my-test-s1.wav (a file inside the public folder) or a full https:// link." },
+      { key: "audioUrl", label: "Audio path or URL", type: "text", required: true, upload: { kinds: ["AUDIO"] }, hint: "For example /audio/listening/my-test-s1.wav (a file inside the public folder) or a full https:// link." },
       { key: "context", label: "Context shown to students", type: "textarea", rows: 2, hint: "One sentence, e.g. “A conversation between a student and a receptionist.”" },
       { key: "transcript", label: "Transcript", type: "textarea", rows: 8, hint: "Hidden until the student submits the test." },
       { key: "order", label: "Order", type: "number" },
@@ -177,7 +191,7 @@ export const resourceMeta: Record<string, ResourceMeta> = {
         hint: "Task 1: graph, chart, table, map, process. Task 2: opinion, discussion, advantage/disadvantage, problem/solution, two-part.",
       },
       { key: "promptText", label: "Prompt", type: "textarea", required: true, rows: 6 },
-      { key: "imageUrl", label: "Task 1 image path or URL", type: "text", hint: "For example /writing/my-chart.svg" },
+      { key: "imageUrl", label: "Task 1 image path or URL", type: "text", upload: { kinds: ["IMAGE"], visibility: "PUBLIC" }, hint: "For example /writing/my-chart.svg" },
       { key: "visualDescription", label: "Text description of the visual", type: "textarea", rows: 4, hint: "Required for Task 1. Used as alt text and given to the AI, which cannot see the image." },
       { key: "published", label: "Published", type: "checkbox" },
     ],
@@ -235,6 +249,33 @@ export const resourceMeta: Record<string, ResourceMeta> = {
         type: "checkbox",
         hint: "Everything above must be published and have published questions. Speaking uses the published Speaking prompts.",
       },
+    ],
+  },
+  plans: {
+    label: "Plans",
+    canCreate: false,
+    canDelete: false,
+    listColumns: ["code", "name", "priceMonthly", "priceYearly", "rank", "published"],
+    fields: [
+      { key: "code", label: "Code", type: "text", readOnly: true, hint: "FREE, BASIC, PREMIUM or PRO. Fixed." },
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "description", label: "Short description", type: "textarea", rows: 2 },
+      { key: "priceMonthly", label: "Monthly price (৳)", type: "number", required: true, hint: "Whole taka. 0 for the free plan." },
+      { key: "priceYearly", label: "Yearly price (৳)", type: "number", nullable: true, hint: "Leave empty to hide the yearly option." },
+      {
+        key: "features",
+        label: "Included features",
+        type: "multi-select",
+        options: [...PLAN_FEATURES],
+        optionLabels: FEATURE_LABELS,
+        hint: "These are enforced: students without a feature see a locked page.",
+      },
+      { key: "bullets", label: "Pricing page bullet points", type: "json-list", rows: 6, hint: "One per line. Only marketing text; the ticks above decide what is unlocked." },
+      { key: "vocabPerDay", label: "New vocabulary words per day", type: "number", nullable: true, hint: "Leave empty for unlimited." },
+      { key: "quizzesPerDay", label: "Quizzes per day", type: "number", nullable: true, hint: "Leave empty for unlimited." },
+      { key: "rank", label: "Rank", type: "number", required: true, hint: "Higher plans have a higher rank. Free is 0." },
+      { key: "highlighted", label: "Highlight on pricing page (Most popular)", type: "checkbox" },
+      { key: "published", label: "Show on pricing page and allow purchase", type: "checkbox" },
     ],
   },
 };

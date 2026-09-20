@@ -1,3 +1,6 @@
+import { hasFeature, requiredPlanFor } from "@/lib/services/plans";
+import { checkFeature } from "@/lib/plans/gate";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getMockTest, listPublishedMockTests, listUserMockAttempts } from "@/lib/services/mock-test";
@@ -22,6 +25,8 @@ function formatDate(value: string | null) {
 export default async function MockTestListPage() {
   const session = await auth();
   const userId = (session!.user as any).id;
+  const gate = checkFeature(userId, "MOCK_TESTS");
+  if (!gate.allowed) return <UpgradeWall title="Full mock tests" description="Sit all four IELTS sections in one timed, full-screen test." requiredPlanName={gate.requiredPlanName} currentPlanName={gate.ent.plan.name} />;
 
   const mocks = listPublishedMockTests();
   const attempts = listUserMockAttempts(userId);
@@ -37,6 +42,13 @@ export default async function MockTestListPage() {
           Speaking are marked by AI. Every band you see is an estimate, not an official IELTS score.
         </p>
       </div>
+
+      {!hasFeature(gate.ent, "ADVANCED_MOCK") && (
+        <Card className="p-4 text-sm text-ink" data-testid="mock-plan-note">
+          On the {gate.ent.plan.name} plan your Listening and Reading are scored automatically. AI marking of Writing and Speaking (and your overall band) is included from{" "}
+          {requiredPlanFor("ADVANCED_MOCK")?.name ?? "Premium"}.
+        </Card>
+      )}
 
       {mocks.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title="No mock tests available yet" description="Check back soon — full tests appear here once they're published." />

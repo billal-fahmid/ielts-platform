@@ -18,10 +18,12 @@ import {
   ieltsAttempts,
   mockTests,
   mockTestAttempts,
+  plans,
 } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { id as newId, slugify } from "@/lib/utils";
 import { resourceMeta, type FieldConfig } from "@/lib/admin/field-config";
+import { PLAN_FEATURES } from "@/lib/plans/features";
 import { mockTestProblems } from "@/lib/services/mock-test";
 import { TASK1_CATEGORIES, TASK2_CATEGORIES, countWords } from "@/lib/ielts/writing";
 
@@ -41,6 +43,7 @@ const tables: Record<string, any> = {
   writingPrompts,
   speakingPrompts,
   mockTests,
+  plans,
 };
 
 const needsSlug = new Set(["courses", "modules", "lessons", "grammarTopics"]);
@@ -186,6 +189,35 @@ const hooks: Record<string, Hooks> = {
     },
   },
 
+  plans: {
+    validate: (m, { existing }) => {
+      if (!existing) throw new ResourceError("Plans can't be created here.");
+      if (!Number.isInteger(m.priceMonthly) || m.priceMonthly < 0 || m.priceMonthly > 1_000_000) throw new ResourceError("The monthly price must be a whole number of taka, 0 or more.");
+      if (m.priceYearly !== null && m.priceYearly !== undefined && (!Number.isInteger(m.priceYearly) || m.priceYearly < 0 || m.priceYearly > 10_000_000)) {
+        throw new ResourceError("The yearly price must be a whole number of taka, or empty.");
+      }
+      for (const key of ["vocabPerDay", "quizzesPerDay"]) {
+        const v = m[key];
+        if (v !== null && v !== undefined && (!Number.isInteger(v) || v < 1 || v > 10_000)) throw new ResourceError("Daily limits must be whole numbers of 1 or more, or empty for unlimited.");
+      }
+      if (!Number.isInteger(m.rank) || m.rank < 0 || m.rank > 10) throw new ResourceError("Rank must be a whole number from 0 to 10.");
+      const unknown = (m.features as string[]).filter((f) => !(PLAN_FEATURES as readonly string[]).includes(f));
+      if (unknown.length) throw new ResourceError(`Unknown feature: ${unknown[0]}.`);
+      if (existing.code === "FREE") {
+        if (m.priceMonthly !== 0 || (m.priceYearly ?? 0) !== 0) throw new ResourceError("The Free plan must stay free.");
+        if (m.rank !== 0) throw new ResourceError("The Free plan must have rank 0.");
+        if (!m.published) throw new ResourceError("The Free plan must stay published: it is what everyone starts on.");
+      } else if (m.rank < 1) {
+        throw new ResourceError("Paid plans need a rank of 1 or more.");
+      }
+      const clash = db.select().from(plans).all().find((p) => p.id !== existing.id && p.rank === m.rank);
+      if (clash) throw new ResourceError(`${clash.name} already has rank ${m.rank}. Each plan needs its own rank.`);
+    },
+    beforeDelete: () => {
+      throw new ResourceError("Plans can't be deleted. Unpublish a paid plan to stop selling it.");
+    },
+  },
+
   speakingPrompts: {
     validate: (m) => {
       if (m.part !== "PART3" && String(m.followUpOfTopic ?? "").trim()) {
@@ -204,6 +236,11 @@ function sanitize(key: string, data: Record<string, any>, mode: "create" | "upda
   const out: Record<string, any> = {};
 
   for (const f of meta.fields as FieldConfig[]) {
+    if (f.readOnly) continue; // never taken from the request
+    if (f.nullable && Object.prototype.hasOwnProperty.call(data, f.key) && (data[f.key] === null || data[f.key] === "")) {
+      out[f.key] = null;
+      continue;
+    }
     const provided = Object.prototype.hasOwnProperty.call(data, f.key) && data[f.key] !== undefined && data[f.key] !== null;
     if (!provided) {
       if (mode === "create" && f.required && f.type !== "checkbox") throw new ResourceError(`${f.label} is required.`);
@@ -242,6 +279,14 @@ function sanitize(key: string, data: Record<string, any>, mode: "create" | "upda
         out[f.key] = raw.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean);
         break;
       }
+      case "multi-select": {
+        if (!Array.isArray(raw)) throw new ResourceError(`${f.label} must be a list.`);
+        const chosen = [...new Set(raw.filter((x): x is string => typeof x === "string"))];
+        const bad = chosen.find((x) => !f.options?.includes(x));
+        if (bad) throw new ResourceError(`"${bad}" is not a valid choice for ${f.label.toLowerCase()}.`);
+        out[f.key] = chosen;
+        break;
+      }
       case "relation-multi": {
         const target = f.relation && tables[f.relation.resource];
         if (!Array.isArray(raw) || !target) throw new ResourceError(`${f.label} must be a list.`);
@@ -268,7 +313,8 @@ function sanitize(key: string, data: Record<string, any>, mode: "create" | "upda
 export function listResource(key: string) {
   const table = tables[key];
   if (!table) return [];
-  return db.select().from(table).all();
+  // Never send password hashes (or similar) to the browser, even to administrators.
+  return db.select().from(table).all().map(({ passwordHash, ...safe }: any) => safe);
 }
 
 function getExisting(key: string, id: string) {
@@ -304,6 +350,7 @@ export function updateResource(key: string, id: string, data: Record<string, any
   hook?.prepare?.(changes);
   hook?.validate?.({ ...existing, ...changes }, { existing, changes });
 
+  if (Object.keys(changes).length === 0) return; // nothing editable was sent (for example only read-only fields)
   db.update(table).set(changes).where(eq(table.id, id)).run();
 }
 

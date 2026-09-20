@@ -1,3 +1,5 @@
+import { denyUnlessFeature } from "@/lib/plans/gate";
+import { aiRateLimit } from "@/lib/security/rate-limit";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { completeSession, evaluateSession, getSession, getTurns } from "@/lib/services/speaking";
@@ -9,6 +11,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ session
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const userId = (session.user as any).id;
+  const limited = aiRateLimit(req, userId);
+  if (limited) return limited;
 
   const { sessionId } = await params;
   const speakingSession = getSession(sessionId);
@@ -22,6 +26,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ session
   const body = await req.json().catch(() => null);
   const totalDurationSeconds = Math.min(7200, Math.max(0, Number(body?.totalDurationSeconds) || 0));
 
+  if (body?.defer !== true) {
+    const denied = denyUnlessFeature(userId, "AI_SPEAKING");
+    if (denied) return denied;
+  }
   completeSession(sessionId, totalDurationSeconds);
 
   // Inside a mock test the marking happens once at the end, and the mock awards its own XP.

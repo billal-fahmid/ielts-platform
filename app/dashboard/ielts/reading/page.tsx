@@ -1,3 +1,5 @@
+import { checkFeature } from "@/lib/plans/gate";
+import { UpgradeWall } from "@/components/plans/upgrade-wall";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { listPublishedPassages, recentReadingAttempts } from "@/lib/services/reading";
@@ -9,6 +11,8 @@ import { BookOpenCheck, Clock, FileText } from "lucide-react";
 export default async function ReadingListPage() {
   const session = await auth();
   const userId = (session!.user as any).id;
+  const gate = checkFeature(userId, "IELTS_PRACTICE");
+  if (!gate.allowed) return <UpgradeWall title="IELTS Reading practice" description="Timed reading passages with every IELTS question type." requiredPlanName={gate.requiredPlanName} currentPlanName={gate.ent.plan.name} />;
 
   const passages = listPublishedPassages();
   const attempts = recentReadingAttempts(userId, 50); // sorted most-recent-first

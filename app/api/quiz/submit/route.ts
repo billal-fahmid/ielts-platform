@@ -1,3 +1,4 @@
+import { getEntitlements, quizAllowance } from "@/lib/services/plans";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { gradeQuiz, saveQuizAttempt } from "@/lib/services/quiz";
@@ -7,6 +8,14 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const userId = (session.user as any).id;
+
+  const allowance = quizAllowance(userId, getEntitlements(userId));
+  if (!allowance.allowed) {
+    return NextResponse.json(
+      { error: `You've used today's ${allowance.limit} free quizzes. The limit resets tomorrow, or upgrade for unlimited quizzes.`, upgrade: true, feature: "QUIZZES" },
+      { status: 402 }
+    );
+  }
 
   const body = await req.json().catch(() => null);
   const quizId = body?.quizId as string;

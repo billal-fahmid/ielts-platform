@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { Plus, Pencil, Trash2, X, Inbox } from "lucide-react";
+import { UploadButton } from "@/components/admin/upload-button";
 
 /** Long labels (like a writing prompt) are cut so they fit a table cell or dropdown. */
 function shorten(text: string, max = 60) {
@@ -73,6 +74,8 @@ export default function AdminResourcePage() {
       return labels.length ? labels.join(", ") : "—";
     }
     if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (field?.type === "multi-select") return Array.isArray(value) && value.length ? `${value.length} selected` : "None";
+    if (field?.type === "number" && value === null) return "Unlimited";
     return String(value ?? "—");
   };
 
@@ -128,9 +131,11 @@ export default function AdminResourcePage() {
           <h1 className="font-display text-2xl text-ink">{meta.label}</h1>
           <p className="mt-1 text-sm text-ink-soft">{items?.length ?? 0} total</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> New
-        </Button>
+        {meta.canCreate !== false && (
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> New
+          </Button>
+        )}
       </div>
 
       <Card className="mt-6 overflow-x-auto p-0">
@@ -141,7 +146,7 @@ export default function AdminResourcePage() {
             <Skeleton className="mt-2 h-8 w-full" />
           </div>
         ) : items.length === 0 ? (
-          <EmptyState icon={Inbox} title={`No ${meta.label.toLowerCase()} yet`} description="Create the first one to get started." action={<Button onClick={openCreate}>Create</Button>} />
+          <EmptyState icon={Inbox} title={`No ${meta.label.toLowerCase()} yet`} description="Create the first one to get started." action={meta.canCreate !== false ? <Button onClick={openCreate}>Create</Button> : undefined} />
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -164,12 +169,14 @@ export default function AdminResourcePage() {
                   ))}
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
-                      <button onClick={() => openEdit(item)} className="rounded-md p-1.5 text-ink-soft hover:bg-primary-soft hover:text-primary">
+                      <button onClick={() => openEdit(item)} aria-label="Edit" className="rounded-md p-1.5 text-ink-soft hover:bg-primary-soft hover:text-primary">
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={() => remove(item)} className="rounded-md p-1.5 text-ink-soft hover:bg-danger-soft hover:text-danger">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {meta.canDelete !== false && (
+                        <button onClick={() => remove(item)} aria-label="Delete" className="rounded-md p-1.5 text-ink-soft hover:bg-danger-soft hover:text-danger">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -234,8 +241,10 @@ function ResourceFormModal({
           .split("\n")
           .map((s) => s.trim())
           .filter(Boolean);
+      } else if (f.readOnly) {
+        // not sent
       } else if (f.type === "number") {
-        payload[f.key] = values[f.key] === "" ? undefined : Number(values[f.key]);
+        payload[f.key] = values[f.key] === "" || values[f.key] === null ? (f.nullable ? null : undefined) : Number(values[f.key]);
       } else {
         payload[f.key] = values[f.key];
       }
@@ -254,7 +263,7 @@ function ResourceFormModal({
         </div>
         <form onSubmit={submit} className="mt-5 flex flex-col gap-4">
           {fields.map((f) => (
-            <Field key={f.key} label={f.label} hint={f.hint}>
+            <Field key={f.key} label={f.label} hint={f.hint} group={f.type === "multi-select" || f.type === "relation-multi"}>
               {f.type === "textarea" || f.type === "json-list" ? (
                 <Textarea rows={f.rows ?? (f.type === "json-list" ? 4 : 3)} value={values[f.key]} onChange={(e) => set(f.key, e.target.value)} required={f.required} />
               ) : f.type === "select" ? (
@@ -295,10 +304,30 @@ function ResourceFormModal({
                     );
                   })}
                 </div>
+              ) : f.type === "multi-select" ? (
+                <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+                  {(f.options ?? []).map((o) => {
+                    const checked = (values[f.key] as string[]).includes(o);
+                    return (
+                      <label key={o} className="flex items-center gap-2 text-sm text-ink">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => set(f.key, e.target.checked ? [...values[f.key], o] : (values[f.key] as string[]).filter((x) => x !== o))}
+                          className="h-4 w-4 accent-primary"
+                        />
+                        {f.optionLabels?.[o] ?? o}
+                      </label>
+                    );
+                  })}
+                </div>
               ) : f.type === "checkbox" ? (
                 <input type="checkbox" checked={!!values[f.key]} onChange={(e) => set(f.key, e.target.checked)} className="h-4 w-4 accent-primary" />
               ) : (
-                <Input type={f.type === "number" ? "number" : "text"} value={values[f.key]} onChange={(e) => set(f.key, e.target.value)} required={f.required} />
+                <>
+                  <Input type={f.type === "number" ? "number" : "text"} value={values[f.key] ?? ""} onChange={(e) => set(f.key, e.target.value)} required={f.required} readOnly={f.readOnly} disabled={f.readOnly} />
+                  {f.upload && <UploadButton kinds={f.upload.kinds} visibility={f.upload.visibility} onUploaded={(url) => set(f.key, url)} />}
+                </>
               )}
             </Field>
           ))}

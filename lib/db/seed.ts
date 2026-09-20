@@ -20,7 +20,12 @@ import {
   writingPrompts,
   speakingPrompts,
   mockTests,
+  enrollments,
+  notifications,
+  plans,
+  subscriptions,
 } from "./schema";
+import { careerCourses } from "./career-content";
 import bcrypt from "bcryptjs";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -71,6 +76,15 @@ async function main() {
     "study_plans",
     "mock_test_attempts",
     "mock_tests",
+    // Platform (Milestone 3)
+    "subscriptions",
+    "plans",
+    "notifications",
+    "enrollments",
+    "email_messages",
+    "audit_logs",
+    "error_logs",
+    "uploaded_files",
     "profiles",
     "users",
   ];
@@ -127,6 +141,39 @@ async function main() {
       { id: uid(), code: "FIRST_MOCK", title: "First Mock Test", description: "Completed your first IELTS mock test", icon: "FileCheck" },
     ])
     .run();
+
+  // ---------- SUBSCRIPTION PLANS ----------
+  const planRows = [
+    {
+      code: "FREE", name: "Free", rank: 0, priceMonthly: 0, priceYearly: null as number | null, highlighted: false,
+      description: "Find your level and start learning basic English.",
+      features: [] as string[], vocabPerDay: 5 as number | null, quizzesPerDay: 3 as number | null,
+      bullets: ["Placement test", "Beginner and Elementary English courses", "5 new vocabulary words a day", "3 quizzes a day", "Progress tracking"],
+    },
+    {
+      code: "BASIC", name: "Basic", rank: 1, priceMonthly: 299, priceYearly: 2999, highlighted: false,
+      description: "All courses and IELTS practice materials.",
+      features: ["IELTS_PRACTICE", "MOCK_TESTS"], vocabPerDay: null, quizzesPerDay: null,
+      bullets: ["All English, Career and IELTS courses", "Unlimited vocabulary and quizzes", "IELTS Listening and Reading practice", "Full IELTS mock tests", "7-day study plan"],
+    },
+    {
+      code: "PREMIUM", name: "Premium", rank: 2, priceMonthly: 799, priceYearly: 7999, highlighted: true,
+      description: "Add AI feedback on your writing, speaking and questions.",
+      features: ["IELTS_PRACTICE", "MOCK_TESTS", "ADVANCED_MOCK", "AI_TUTOR", "AI_WRITING", "AI_SPEAKING"], vocabPerDay: null, quizzesPerDay: null,
+      bullets: ["Everything in Basic", "AI Tutor in English and বাংলা", "AI Writing feedback", "AI Speaking practice", "AI marking in mock tests"],
+    },
+    {
+      code: "PRO", name: "Pro", rank: 3, priceMonthly: 1999, priceYearly: 19999, highlighted: false,
+      description: "Everything, plus live classes and real teachers.",
+      features: ["IELTS_PRACTICE", "MOCK_TESTS", "ADVANCED_MOCK", "AI_TUTOR", "AI_WRITING", "AI_SPEAKING", "LIVE_CLASSES", "TEACHER_FEEDBACK", "ONE_ON_ONE"], vocabPerDay: null, quizzesPerDay: null,
+      bullets: ["Everything in Premium", "Live classes with teachers", "Teacher feedback on writing and speaking", "1-on-1 speaking sessions"],
+    },
+  ];
+  const planIds: Record<string, string> = {};
+  for (const p of planRows) {
+    planIds[p.code] = uid();
+    db.insert(plans).values({ id: planIds[p.code], ...p, published: true }).run();
+  }
 
   // ---------- COURSES / MODULES / LESSONS ----------
   const courseDefs = [
@@ -220,6 +267,7 @@ async function main() {
         image: c.image,
         order: 0,
         published: true,
+        requiredPlan: c.category === "BEGINNER" || c.category === "ELEMENTARY" ? "FREE" : "BASIC",
       })
       .run();
 
@@ -241,8 +289,8 @@ async function main() {
             title,
             description: `Learn about "${title}" with clear examples and practice.`,
             content: buildLessonContent(title),
-            videoUrl: "/media/placeholder-video.mp4",
-            audioUrl: "/media/placeholder-audio.mp3",
+            videoUrl: null,
+            audioUrl: null,
             examples: [
               `Example: "${title}" used in a simple sentence.`,
               `Example: A second sentence showing "${title}" in context.`,
@@ -283,6 +331,43 @@ async function main() {
       });
     });
   }
+
+  // ---------- ENGLISH FOR CAREER ----------
+  careerCourses.forEach((c, ci) => {
+    const courseId = uid();
+    db.insert(courses)
+      .values({ id: courseId, slug: c.slug, title: c.title, description: c.description, category: c.category, track: "CAREER", image: null, order: 100 + ci, published: true, requiredPlan: "BASIC" })
+      .run();
+    const moduleId = uid();
+    db.insert(modules).values({ id: moduleId, courseId, slug: `${c.slug}-m1`, title: c.moduleTitle, order: 0 }).run();
+
+    c.lessons.forEach((l, li) => {
+      const lessonId = uid();
+      db.insert(lessons)
+        .values({
+          id: lessonId,
+          moduleId,
+          slug: `${c.slug}-m1-l${li + 1}`,
+          title: l.title,
+          description: `${c.title}: ${l.title}`,
+          content: l.content,
+          videoUrl: null,
+          audioUrl: null,
+          examples: l.examples,
+          vocabularyIds: [],
+          order: lessonOrderCounter++,
+          xpReward: 20,
+        })
+        .run();
+      const quizId = uid();
+      db.insert(quizzes).values({ id: quizId, title: `${l.title} Quiz`, type: "LESSON", lessonId }).run();
+      db.insert(questions)
+        .values(
+          l.quiz.map((q, qi) => ({ id: uid(), quizId, type: "MCQ" as const, prompt: q.prompt, options: q.options, correctAnswer: q.answer, explanation: q.explanation, order: qi }))
+        )
+        .run();
+    });
+  });
 
   // ---------- GRAMMAR LAB ----------
   const grammarDefs = [
@@ -1108,6 +1193,28 @@ The library also offers free Wi-Fi, a children's story hour every Saturday morni
         category: "Grammar",
       },
     ])
+    .run();
+
+  // ---------- DEMO ENROLMENTS & NOTIFICATIONS ----------
+  const enrolledCourse = db.select().from(courses).all().find((c) => c.slug === "beginner-english");
+  if (enrolledCourse) db.insert(enrollments).values({ id: uid(), userId: studentId, courseId: enrolledCourse.id }).run();
+  db.insert(notifications)
+    .values([
+      { id: uid(), userId: studentId, type: "SYSTEM", title: "Welcome to BanglaEnglish!", body: "Take the placement test to find your level, then start your first lesson.", url: "/dashboard/assessment" },
+      { id: uid(), userId: studentId, type: "COURSE", title: "New: English for Career courses", body: "Job interviews, CVs, emails and more. Take a look.", url: "/dashboard/courses?track=CAREER" },
+    ])
+    .run();
+
+  // The demo student has the Premium plan so every feature can be tried; new sign-ups start on Free.
+  db.insert(subscriptions)
+    .values({
+      id: uid(),
+      userId: studentId,
+      planId: planIds.PREMIUM,
+      source: "ADMIN",
+      startedAt: new Date().toISOString(),
+      currentPeriodEnd: new Date(Date.now() + 90 * 86_400_000).toISOString(),
+    })
     .run();
 
   console.log("Seed complete.");

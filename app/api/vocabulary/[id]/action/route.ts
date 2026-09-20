@@ -1,3 +1,4 @@
+import { getEntitlements, vocabAllowance } from "@/lib/services/plans";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { setVocabStatus, countLearnedWords } from "@/lib/services/vocabulary";
@@ -8,6 +9,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const { id } = await params;
   const userId = (session.user as any).id;
+
+  const allowance = vocabAllowance(userId, getEntitlements(userId), id);
+  if (!allowance.allowed) {
+    return NextResponse.json(
+      { error: `You've reached today's limit of ${allowance.limit} new words on the Free plan. It resets tomorrow, or upgrade for unlimited vocabulary.`, upgrade: true, feature: "VOCABULARY" },
+      { status: 402 }
+    );
+  }
 
   const body = await req.json().catch(() => ({}));
   const action = body.action as "learned" | "difficult" | "easy" | "medium" | "hard";

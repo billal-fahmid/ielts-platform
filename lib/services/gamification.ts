@@ -2,6 +2,9 @@ import { db } from "@/lib/db";
 import { profiles, badges, userBadges } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { gLevelFromXp, id as newId } from "@/lib/utils";
+import { notify } from "@/lib/services/notifications";
+
+const STREAK_MILESTONES = new Set([3, 7, 14, 30, 60, 100]);
 
 export async function awardXp(userId: string, amount: number) {
   const profile = db.select().from(profiles).where(eq(profiles.userId, userId)).get();
@@ -22,6 +25,10 @@ export async function awardXp(userId: string, amount: number) {
     .set({ xp: newXp, gLevel: level, streak, lastStudyDate: today })
     .where(eq(profiles.userId, userId))
     .run();
+
+  if (last !== today && STREAK_MILESTONES.has(streak)) {
+    notify(userId, { type: "STREAK", title: `${streak}-day streak!`, body: `You have studied ${streak} days in a row. Keep it going!`, url: "/dashboard/progress" });
+  }
 
   await checkAndAwardBadges(userId, { streak, xp: newXp });
 
@@ -44,6 +51,8 @@ async function grantBadgeIfMissing(userId: string, badgeId: string) {
     .get();
   if (!has) {
     db.insert(userBadges).values({ id: newId(), userId, badgeId }).run();
+    const badge = db.select().from(badges).where(eq(badges.id, badgeId)).get();
+    if (badge) notify(userId, { type: "ACHIEVEMENT", title: `Badge earned: ${badge.title}`, body: badge.description, url: "/dashboard/progress" });
     return true;
   }
   return false;

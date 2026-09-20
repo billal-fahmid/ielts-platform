@@ -93,6 +93,9 @@ function WordCard({ word }: { word: Word }) {
       setStatus(action === "learned" ? "LEARNED" : "DIFFICULT");
       if (action === "learned") push("Nice! +5 XP", "success");
       router.refresh();
+    } else if (res.status === 402) {
+      const data = await res.json().catch(() => null);
+      push(data?.error ?? "You've reached today's word limit.", "error");
     }
   };
 
