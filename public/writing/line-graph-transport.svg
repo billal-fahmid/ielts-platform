@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" role="img" aria-label="Line graph of commuter transport use, 2000 to 2020">
+  <rect width="600" height="380" fill="#ffffff"/>
+  <text x="300" y="26" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#141414" text-anchor="middle">Commuters by type of transport (%), 2000–2020</text>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#55524f" text-anchor="end">
+    <text x="66" y="304">0</text><text x="66" y="267">10</text><text x="66" y="230">20</text><text x="66" y="193">30</text><text x="66" y="155">40</text><text x="66" y="118">50</text><text x="66" y="81">60</text><text x="66" y="44">70</text>
+  </g>
+  <g stroke="#e3dedc" stroke-width="1">
+    <line x1="80" y1="300" x2="540" y2="300"/><line x1="80" y1="262.9" x2="540" y2="262.9"/><line x1="80" y1="225.7" x2="540" y2="225.7"/>
+    <line x1="80" y1="188.6" x2="540" y2="188.6"/><line x1="80" y1="151.4" x2="540" y2="151.4"/><line x1="80" y1="114.3" x2="540" y2="114.3"/>
+    <line x1="80" y1="77.1" x2="540" y2="77.1"/><line x1="80" y1="40" x2="540" y2="40"/>
+  </g>
+  <g fill="none" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <polyline stroke="#c8102e" points="80,95.7 195,84.5 310,77.1 425,99.4 540,132.9"/>
+    <polyline stroke="#141414" points="80,188.6 195,196 310,207.2 425,199.7 540,188.6"/>
+    <polyline stroke="#8a8582" stroke-dasharray="7 5" points="80,281.4 195,277.7 310,270.3 425,255.4 540,233.1"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#141414" text-anchor="middle">
+    <text x="80" y="322">2000</text><text x="195" y="322">2005</text><text x="310" y="322">2010</text><text x="425" y="322">2015</text><text x="540" y="322">2020</text>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#141414">
+    <line x1="130" y1="352" x2="158" y2="352" stroke="#c8102e" stroke-width="3"/><text x="164" y="356">Car</text>
+    <line x1="230" y1="352" x2="258" y2="352" stroke="#141414" stroke-width="3"/><text x="264" y="356">Bus</text>
+    <line x1="330" y1="352" x2="358" y2="352" stroke="#8a8582" stroke-width="3" stroke-dasharray="7 5"/><text x="364" y="356">Bicycle</text>
+  </g>
+</svg>

@@ -16,10 +16,13 @@ export function QuestionRenderer({
   question,
   value,
   onChange,
+  hideImage = false,
 }: {
   question: RunnerQuestion;
   value: unknown;
   onChange: (value: unknown) => void;
+  /** Skip the map image (the runner shows it once above a group of map questions). */
+  hideImage?: boolean;
 }) {
   switch (question.questionType) {
     case "MCQ_SINGLE":
@@ -120,8 +123,22 @@ export function QuestionRenderer({
       const imageUrl = question.content.imageUrl as string | undefined;
       return (
         <div className="flex flex-col gap-3">
-          {imageUrl && <img src={imageUrl} alt="Map" className="rounded-lg border border-border" />}
-          <ChoiceInput options={labels} value={value as string} onChange={onChange} />
+          {imageUrl && !hideImage && <img src={imageUrl} alt="Map" className="rounded-lg border border-border" />}
+          <div className="flex flex-wrap gap-2">
+            {labels.map((label) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => onChange(label)}
+                className={cn(
+                  "flex h-10 min-w-10 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors",
+                  value === label ? "border-primary bg-primary text-white" : "border-border text-ink hover:border-primary/50"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       );
     }

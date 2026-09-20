@@ -81,7 +81,8 @@ html.dark {
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Bangla fallbacks: Inter has no Bengali glyphs, so name a Bangla font on each major platform. */
+  font-family: var(--font-sans), "Nirmala UI", "Noto Sans Bengali", "Kohinoor Bangla", "Bangla Sangam MN", ui-sans-serif, system-ui, sans-serif;
 }
 
 h1, h2, h3, h4, .font-display {

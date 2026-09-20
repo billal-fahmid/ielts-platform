@@ -28,6 +28,21 @@ function normalize(v: unknown): string {
   return String(v ?? "").trim().toLowerCase();
 }
 
+/** Grades every question against the student's answers; `totalPoints` is the max possible raw score. */
+export function gradeQuestions(
+  questions: { id: string; questionType: string; correctAnswer: unknown; points: number; explanation: string | null }[],
+  answers: Record<string, unknown>
+) {
+  let rawScore = 0;
+  const perQuestion = questions.map((q) => {
+    const isCorrect = isAnswerCorrect(q.questionType, q.correctAnswer, answers[q.id]);
+    if (isCorrect) rawScore += q.points;
+    return { questionId: q.id, isCorrect, correctAnswer: q.correctAnswer, explanation: q.explanation };
+  });
+  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+  return { rawScore, totalPoints, perQuestion };
+}
+
 /** Returns true if the student's answer is correct for the given question type. */
 export function isAnswerCorrect(questionType: string, correctAnswer: unknown, studentAnswer: unknown): boolean {
   if (studentAnswer === undefined || studentAnswer === null || studentAnswer === "") return false;

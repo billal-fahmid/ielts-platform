@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getAttempt, saveAttemptProgress } from "@/lib/services/reading";
+import { getAttempt, saveAttemptProgress } from "@/lib/services/ielts-attempts";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ attemptId: string }> }) {
   const session = await auth();

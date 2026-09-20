@@ -13,12 +13,14 @@ import {
   GraduationCap,
   Globe,
   Target,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, mobileNav: true },
   { href: "/dashboard/ielts", label: "IELTS Prep", icon: Target, mobileNav: true },
+  { href: "/dashboard/tutor", label: "AI Tutor", icon: Bot, mobileNav: true },
   { href: "/dashboard/assessment", label: "Assessment", icon: ClipboardCheck, mobileNav: false },
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen, mobileNav: true },
   { href: "/dashboard/grammar", label: "Grammar Lab", icon: Layers, mobileNav: false },

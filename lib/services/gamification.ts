@@ -51,7 +51,7 @@ async function grantBadgeIfMissing(userId: string, badgeId: string) {
 
 export async function checkAndAwardBadges(
   userId: string,
-  ctx: { streak?: number; xp?: number; lessonsCompleted?: number; wordsLearned?: number }
+  ctx: { streak?: number; xp?: number; lessonsCompleted?: number; wordsLearned?: number; mockTestsCompleted?: number }
 ) {
   const newlyAwarded: string[] = [];
 
@@ -65,6 +65,11 @@ export async function checkAndAwardBadges(
   }
   if (ctx.lessonsCompleted === 1) {
     const b = await ensureBadge("FIRST_LESSON", "First Lesson", "Completed your first lesson", "GraduationCap");
+    if (await grantBadgeIfMissing(userId, b.id)) newlyAwarded.push(b.title);
+  }
+
+  if (ctx.mockTestsCompleted && ctx.mockTestsCompleted >= 1) {
+    const b = await ensureBadge("FIRST_MOCK", "First Mock Test", "Completed your first IELTS mock test", "FileCheck");
     if (await grantBadgeIfMissing(userId, b.id)) newlyAwarded.push(b.title);
   }
 

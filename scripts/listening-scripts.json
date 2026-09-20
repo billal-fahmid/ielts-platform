@@ -1,0 +1,36 @@
+{
+  "s1": {
+    "context": "A conversation between a university student and a sports centre receptionist about gym membership.",
+    "lines": [
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "Good morning, Willowbrook Sports Centre. How can I help you?" },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "Hello. I'm a university student and I'd like to find out about joining the gym." },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "Of course. Let me take some details. Can I have your surname, please?" },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "It's Harper. That's H, A, R, P, E, R." },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "Thank you, Mr Harper. Now, as a student you can choose our student membership, which is cheaper than the standard one." },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "That sounds good. How much is it?" },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "The student membership is twenty-two pounds a month. The standard membership is thirty-five pounds." },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "Twenty-two pounds is fine. Is there any special offer if I sign up for a full year?" },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "Yes. If you sign a twelve-month contract, you get a free personal training session in your first week." },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "Excellent. And when is the gym usually busiest? I'd rather avoid the crowds." },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "It's very quiet in the mornings and at lunchtime, but it gets crowded in the evening, after five o'clock." },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "Then I'll try to come in the mornings. What time do the different facilities open?" },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "The pool opens at six in the morning, the gym opens at seven, and the sauna doesn't open until nine." },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "Great. Do I need to do anything before I start?" },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "Yes, all new members must attend a short induction. It runs every Saturday morning at ten o'clock." },
+      { "speaker": "Caller", "voice": "Microsoft David Desktop", "text": "Perfect. I'll come along this Saturday." },
+      { "speaker": "Receptionist", "voice": "Microsoft Zira Desktop", "text": "Wonderful. We look forward to seeing you, Mr Harper." }
+    ]
+  },
+  "s2": {
+    "context": "A guide gives new students a walking tour of the Northfield University campus. Look at the map while you listen.",
+    "lines": [
+      { "speaker": "Guide", "voice": "Microsoft Zira Desktop", "text": "Welcome to Northfield University, and congratulations on starting your studies. I'm going to give you a short tour of the main campus. Please look at the map in front of you. We are standing at the main entrance, at the bottom of the map." },
+      { "speaker": "Guide", "voice": "Microsoft Zira Desktop", "text": "Walk straight up the central path. On your left, near the entrance, you'll see the student café. That's the building marked C. On your right, at the same level, is the health centre, marked F." },
+      { "speaker": "Guide", "voice": "Microsoft Zira Desktop", "text": "Continue as far as the fountain in the middle of the path. Directly on your left, opposite the fountain, is the library, marked B. The library is the building you'll use most, so remember that you need to swipe your student card to get in." },
+      { "speaker": "Guide", "voice": "Microsoft Zira Desktop", "text": "Opposite the library, on the right of the fountain, is the science block, marked E." },
+      { "speaker": "Guide", "voice": "Microsoft Zira Desktop", "text": "At the far end of the path, on the top left, is the main lecture theatre, marked A. And in the top right corner is the sports hall, marked D." },
+      { "speaker": "Guide", "voice": "Microsoft Zira Desktop", "text": "A few useful points before we finish. During exam weeks, the library and the computer lab stay open around the clock, but the café and the sports hall close at ten in the evening." },
+      { "speaker": "Guide", "voice": "Microsoft Zira Desktop", "text": "The tour ends at the sports hall, where each of you will collect a welcome pack. Thank you for listening, and enjoy your first week." }
+    ]
+  }
+}

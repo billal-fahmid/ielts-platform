@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getAttempt, getPassage, getQuestionsForPassage } from "@/lib/services/reading";
+import { getAttempt } from "@/lib/services/ielts-attempts";
+import { getPassage, getQuestionsForPassage } from "@/lib/services/reading";
 import { isAnswerCorrect } from "@/lib/ielts/question-types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

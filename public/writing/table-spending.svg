@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" role="img" aria-label="Table of average monthly household spending in 2010 and 2020">
+  <rect width="600" height="300" fill="#ffffff"/>
+  <text x="300" y="30" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#141414" text-anchor="middle">Average monthly household spending (US$)</text>
+  <rect x="40" y="52" width="520" height="40" fill="#141414"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#ffffff">
+    <text x="60" y="77">Category</text><text x="380" y="77" text-anchor="middle">2010</text><text x="490" y="77" text-anchor="middle">2020</text>
+  </g>
+  <g stroke="#e3dedc" stroke-width="1"><line x1="40" y1="132" x2="560" y2="132"/><line x1="40" y1="172" x2="560" y2="172"/><line x1="40" y1="212" x2="560" y2="212"/><line x1="40" y1="252" x2="560" y2="252"/></g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#141414">
+    <text x="60" y="117">Housing</text><text x="380" y="117" text-anchor="middle">620</text><text x="490" y="117" text-anchor="middle">850</text>
+    <text x="60" y="157">Food</text><text x="380" y="157" text-anchor="middle">310</text><text x="490" y="157" text-anchor="middle">360</text>
+    <text x="60" y="197">Transport</text><text x="380" y="197" text-anchor="middle">140</text><text x="490" y="197" text-anchor="middle">190</text>
+    <text x="60" y="237">Entertainment</text><text x="380" y="237" text-anchor="middle">90</text><text x="490" y="237" text-anchor="middle">70</text>
+  </g>
+</svg>

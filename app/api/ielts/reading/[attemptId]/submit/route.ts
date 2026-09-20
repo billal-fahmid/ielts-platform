@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getAttempt, submitAttempt } from "@/lib/services/reading";
+import { getAttempt } from "@/lib/services/ielts-attempts";
+import { submitAttempt } from "@/lib/services/reading";
 import { awardXp } from "@/lib/services/gamification";
+import { isLateMockSubmission } from "@/lib/services/mock-test";
 
 export async function POST(req: Request, { params }: { params: Promise<{ attemptId: string }> }) {
   const session = await auth();
@@ -14,8 +16,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ attempt
   if (attempt.status !== "IN_PROGRESS") return NextResponse.json({ error: "Attempt already submitted" }, { status: 409 });
 
   const body = await req.json().catch(() => null);
-  const answers = (body?.answers ?? {}) as Record<string, unknown>;
-  const timeSpentSeconds = Number(body?.timeSpentSeconds ?? attempt.timeSpentSeconds ?? 0);
+  const late = isLateMockSubmission(attempt); // mock deadline passed: grade the last auto-save, not this request
+  const answers = (late ? attempt.answers ?? {} : body?.answers ?? {}) as Record<string, unknown>;
+  const timeSpentSeconds = Number(late ? attempt.timeSpentSeconds : body?.timeSpentSeconds ?? attempt.timeSpentSeconds ?? 0);
 
   const result = submitAttempt(attemptId, answers, timeSpentSeconds);
 

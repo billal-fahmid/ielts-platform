@@ -14,7 +14,7 @@ export async function checkAIConnection(): Promise<AIHealth> {
   try {
     const res = await provider.complete({
       messages: [{ role: "user", content: "Reply with exactly: OK" }],
-      maxTokens: 10,
+      maxTokens: 64,
     });
     return { available: true, ok: res.text.trim().length > 0, provider: provider.name };
   } catch (err) {

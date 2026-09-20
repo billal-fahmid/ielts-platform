@@ -16,12 +16,15 @@ export function ReadingRunner({
   questions,
   initialAnswers,
   initialTimeSpentSeconds,
+  onSubmitted,
 }: {
   attemptId: string;
   passage: Passage;
   questions: RunnerQuestion[];
   initialAnswers: Record<string, unknown>;
   initialTimeSpentSeconds: number;
+  /** Set inside a mock test: called instead of navigating to the practice result page. */
+  onSubmitted?: () => void;
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, unknown>>(initialAnswers);
@@ -45,12 +48,14 @@ export function ReadingRunner({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answers: answersRef.current, timeSpentSeconds: elapsedRef.current }),
     });
-    if (res.ok) {
-      router.push(`/dashboard/ielts/reading/result/${attemptId}`);
+    // 409 means the attempt was already submitted (e.g. the server auto-submitted it when time ran out).
+    if (res.ok || (onSubmitted && res.status === 409)) {
+      if (onSubmitted) onSubmitted();
+      else router.push(`/dashboard/ielts/reading/result/${attemptId}`);
     } else {
       setSubmitting(false);
     }
-  }, [attemptId, router]);
+  }, [attemptId, router, onSubmitted]);
 
   // Countdown timer, auto-submits when it hits zero.
   useEffect(() => {

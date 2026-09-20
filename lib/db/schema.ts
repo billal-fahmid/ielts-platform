@@ -320,6 +320,8 @@ export const ieltsAttempts = sqliteTable("ielts_attempts", {
   totalQuestions: integer("total_questions"),
   bandScore: real("band_score"),
   timeSpentSeconds: integer("time_spent_seconds").notNull().default(0),
+  // Set when this attempt belongs to a full mock test; standalone practice never resumes these.
+  mockAttemptId: text("mock_attempt_id"),
   startedAt: text("started_at").default(sql`(CURRENT_TIMESTAMP)`),
   completedAt: text("completed_at"),
 });
@@ -344,6 +346,8 @@ export const writingPrompts = sqliteTable("writing_prompts", {
   }).notNull(),
   promptText: text("prompt_text").notNull(),
   imageUrl: text("image_url"),
+  // Text version of the Task 1 visual: used as alt text and given to the AI evaluator (it can't see the image).
+  visualDescription: text("visual_description"),
   sampleAnswer: text("sample_answer"),
   published: integer("published", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
@@ -359,6 +363,8 @@ export const writingSubmissions = sqliteTable("writing_submissions", {
   wordCount: integer("word_count").notNull().default(0),
   status: text("status", { enum: ["DRAFT", "SUBMITTED", "EVALUATED"] }).notNull().default("DRAFT"),
   timeSpentSeconds: integer("time_spent_seconds").notNull().default(0),
+  // Set when this essay belongs to a full mock test; standalone practice never resumes these.
+  mockAttemptId: text("mock_attempt_id"),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
   submittedAt: text("submitted_at"),
@@ -379,6 +385,10 @@ export const writingEvaluations = sqliteTable("writing_evaluations", {
     .default([]),
   vocabularySuggestions: text("vocabulary_suggestions", { mode: "json" }).$type<string[]>().default([]),
   improvementPlan: text("improvement_plan", { mode: "json" }).$type<string[]>().default([]),
+  bandRangeLow: real("band_range_low"),
+  bandRangeHigh: real("band_range_high"),
+  coherenceFeedback: text("coherence_feedback"),
+  structureFeedback: text("structure_feedback"),
   modelUsed: text("model_used"),
   rawAiResponse: text("raw_ai_response"),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
@@ -420,6 +430,8 @@ export const speakingTurns = sqliteTable("speaking_turns", {
       fillerWordCount: number;
       repeatedWordCount: number;
       durationSeconds: number;
+      /** True when the answer was typed instead of spoken (no speech recognition available). */
+      typed?: boolean;
     }>()
     .default({ wpm: 0, pauseCount: 0, totalPauseMs: 0, fillerWordCount: 0, repeatedWordCount: 0, durationSeconds: 0 }),
   order: integer("order").notNull().default(0),
@@ -434,6 +446,10 @@ export const speakingEvaluations = sqliteTable("speaking_evaluations", {
   lexicalResource: real("lexical_resource").notNull(),
   grammarAccuracy: real("grammar_accuracy").notNull(),
   pronunciationEstimate: real("pronunciation_estimate").notNull(),
+  bandRangeLow: real("band_range_low"),
+  bandRangeHigh: real("band_range_high"),
+  coherenceFeedback: text("coherence_feedback"),
+  pronunciationNotes: text("pronunciation_notes"),
   strengths: text("strengths", { mode: "json" }).$type<string[]>().default([]),
   weaknesses: text("weaknesses", { mode: "json" }).$type<string[]>().default([]),
   fillerWordCount: integer("filler_word_count").notNull().default(0),
@@ -513,7 +529,11 @@ export const mockTestAttempts = sqliteTable("mock_test_attempts", {
     .notNull()
     .default("LISTENING"),
   listeningAttemptId: text("listening_attempt_id"),
+  // One attempt per reading passage, in the mock's passage order.
+  readingAttemptIds: text("reading_attempt_ids", { mode: "json" }).$type<string[]>().default([]),
   readingAttemptId: text("reading_attempt_id"),
+  // Wall-clock start of the 60-minute writing section (the deadline survives closing the tab).
+  writingStartedAt: text("writing_started_at"),
   writingSubmissionIds: text("writing_submission_ids", { mode: "json" }).$type<string[]>().default([]),
   speakingSessionId: text("speaking_session_id"),
   listeningBand: real("listening_band"),

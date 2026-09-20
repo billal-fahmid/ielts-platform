@@ -63,7 +63,8 @@ function lookup(table: BandTableRow[], scaledScore: number): number {
   for (const row of table) {
     if (scaledScore >= row.min) return row.band;
   }
-  return 0;
+  // Below the lowest published threshold: any correct answer still earns band 1; none earns 0.
+  return scaledScore > 0 ? 1 : 0;
 }
 
 function scaleTo40(rawScore: number, totalQuestions: number): number {

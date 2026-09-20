@@ -7,6 +7,7 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 
 export class AnthropicProvider implements AIProvider {
   readonly name = "anthropic";
+  readonly model = MODEL;
   private client: Anthropic | null = null;
 
   isConfigured() {

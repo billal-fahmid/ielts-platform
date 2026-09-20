@@ -6,6 +6,8 @@ export type AICompleteRequest = {
   system?: string;
   messages: AIMessage[];
   maxTokens?: number;
+  /** Sampling hint: low for scoring consistency, higher for conversation. Providers may ignore it. */
+  temperature?: number;
 };
 
 export type AICompleteJsonRequest<T> = AICompleteRequest & {
@@ -14,6 +16,8 @@ export type AICompleteJsonRequest<T> = AICompleteRequest & {
 
 export interface AIProvider {
   readonly name: string;
+  /** Model identifier, recorded alongside stored AI results. */
+  readonly model?: string;
   isConfigured(): boolean;
   complete(req: AICompleteRequest): Promise<{ text: string }>;
   completeJson<T>(req: AICompleteJsonRequest<T>): Promise<T>;

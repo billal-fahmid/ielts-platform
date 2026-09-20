@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/button";
 import { BandChart } from "./band-chart";
-import { Target, CalendarClock, Headphones, BookOpenCheck, PenLine, Mic, Sparkles, ArrowRight } from "lucide-react";
+import { Target, CalendarClock, Headphones, BookOpenCheck, PenLine, Mic, Sparkles, ArrowRight, ClipboardCheck } from "lucide-react";
 
 const SKILLS = [
   { key: "listening", label: "Listening", href: "/dashboard/ielts/listening", icon: Headphones },
@@ -63,6 +63,21 @@ export default async function IeltsDashboardPage() {
           sub="From your last assessment"
         />
       </div>
+
+      <Card className="flex flex-wrap items-center justify-between gap-4 border-primary/40 p-6">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <ClipboardCheck className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="font-display text-lg text-ink">Full mock test</h2>
+            <p className="text-sm text-ink-soft">All four sections in one timed sitting, with an estimated overall band at the end.</p>
+          </div>
+        </div>
+        <LinkButton href="/dashboard/ielts/mock-test">
+          Take a mock test <ArrowRight className="h-4 w-4" />
+        </LinkButton>
+      </Card>
 
       <Card className="p-6">
         <div className="flex items-center justify-between">

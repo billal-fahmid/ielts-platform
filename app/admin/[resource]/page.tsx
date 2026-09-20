@@ -11,6 +11,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { Plus, Pencil, Trash2, X, Inbox } from "lucide-react";
 
+/** Long labels (like a writing prompt) are cut so they fit a table cell or dropdown. */
+function shorten(text: string, max = 60) {
+  const oneLine = text.replace(/\s+/g, " ").trim();
+  return oneLine.length > max ? oneLine.slice(0, max - 1) + "…" : oneLine;
+}
+
+/** The records a relation field can choose from, after applying its filter (e.g. only Task 1 prompts). */
+function relationChoices(f: FieldConfig, relations: Record<string, any[]>) {
+  const all = relations[f.relation!.resource] ?? [];
+  const filter = f.relation!.filter;
+  return filter ? all.filter((r) => r[filter.key] === filter.value) : all;
+}
+
 export default function AdminResourcePage() {
   const params = useParams<{ resource: string }>();
   const resourceKey = params.resource;
@@ -18,6 +31,7 @@ export default function AdminResourcePage() {
   const { push } = useToast();
 
   const [items, setItems] = useState<any[] | null>(null);
+  const [relations, setRelations] = useState<Record<string, any[]>>({});
   const [editing, setEditing] = useState<any | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -31,8 +45,36 @@ export default function AdminResourcePage() {
   useEffect(() => {
     setItems(null);
     load();
+    // Records that "relation" fields point to (e.g. a section's listening test), for dropdowns and list labels.
+    setRelations({});
+    (meta?.fields ?? [])
+      .filter((f) => (f.type === "relation" || f.type === "relation-multi") && f.relation)
+      .forEach(async (f) => {
+        const target = f.relation!.resource;
+        const res = await fetch(`/api/admin/${target}`);
+        const json = await res.json().catch(() => ({ items: [] }));
+        setRelations((r) => ({ ...r, [target]: res.ok ? json.items : [] }));
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resourceKey]);
+
+  const cellText = (item: any, column: string) => {
+    const field = meta?.fields.find((f) => f.key === column);
+    const value = item[column];
+    if (field?.type === "relation" && field.relation) {
+      const target = relations[field.relation.resource]?.find((r) => r.id === value);
+      return target ? shorten(String(target[field.relation.labelKey])) : "—";
+    }
+    if (field?.type === "relation-multi" && field.relation) {
+      const labels = (Array.isArray(value) ? value : []).map((id: string) => {
+        const target = relations[field.relation!.resource]?.find((r) => r.id === id);
+        return target ? shorten(String(target[field.relation!.labelKey]), 28) : "?";
+      });
+      return labels.length ? labels.join(", ") : "—";
+    }
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    return String(value ?? "—");
+  };
 
   if (!meta) {
     return <EmptyState icon={Inbox} title="Unknown resource" description="This admin section doesn't exist." />;
@@ -74,7 +116,8 @@ export default function AdminResourcePage() {
       push("Deleted", "success");
       load();
     } else {
-      push("Could not delete", "error");
+      const json = await res.json().catch(() => ({}));
+      push(json.error || "Could not delete", "error");
     }
   };
 
@@ -116,7 +159,7 @@ export default function AdminResourcePage() {
                 <tr key={item.id} className="border-b border-border last:border-0 hover:bg-primary-soft/40">
                   {meta.listColumns.map((c) => (
                     <td key={c} className="max-w-[220px] truncate px-4 py-3 text-ink">
-                      {String(item[c] ?? "—")}
+                      {cellText(item, c)}
                     </td>
                   ))}
                   <td className="px-4 py-3">
@@ -140,6 +183,7 @@ export default function AdminResourcePage() {
         <ResourceFormModal
           title={editing ? `Edit ${meta.label.slice(0, -1)}` : `New ${meta.label.slice(0, -1)}`}
           fields={meta.fields}
+          relations={relations}
           initial={editing}
           saving={saving}
           onCancel={() => setShowForm(false)}
@@ -153,6 +197,7 @@ export default function AdminResourcePage() {
 function ResourceFormModal({
   title,
   fields,
+  relations,
   initial,
   saving,
   onCancel,
@@ -160,6 +205,7 @@ function ResourceFormModal({
 }: {
   title: string;
   fields: FieldConfig[];
+  relations: Record<string, any[]>;
   initial: any;
   saving: boolean;
   onCancel: () => void;
@@ -208,9 +254,9 @@ function ResourceFormModal({
         </div>
         <form onSubmit={submit} className="mt-5 flex flex-col gap-4">
           {fields.map((f) => (
-            <Field key={f.key} label={f.label}>
+            <Field key={f.key} label={f.label} hint={f.hint}>
               {f.type === "textarea" || f.type === "json-list" ? (
-                <Textarea rows={f.type === "json-list" ? 4 : 3} value={values[f.key]} onChange={(e) => set(f.key, e.target.value)} required={f.required} />
+                <Textarea rows={f.rows ?? (f.type === "json-list" ? 4 : 3)} value={values[f.key]} onChange={(e) => set(f.key, e.target.value)} required={f.required} />
               ) : f.type === "select" ? (
                 <Select value={values[f.key]} onChange={(e) => set(f.key, e.target.value)} required={f.required}>
                   <option value="">Select...</option>
@@ -220,6 +266,35 @@ function ResourceFormModal({
                     </option>
                   ))}
                 </Select>
+              ) : f.type === "relation" && f.relation ? (
+                <Select value={values[f.key]} onChange={(e) => set(f.key, e.target.value)} required={f.required}>
+                  <option value="">Select...</option>
+                  {relationChoices(f, relations).map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {shorten(String(r[f.relation!.labelKey]))}
+                    </option>
+                  ))}
+                </Select>
+              ) : f.type === "relation-multi" && f.relation ? (
+                <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto rounded-lg border border-border p-3">
+                  {relationChoices(f, relations).length === 0 && <p className="text-xs text-ink-soft">Nothing to choose from yet.</p>}
+                  {relationChoices(f, relations).map((r) => {
+                    const checked = (values[f.key] as string[]).includes(r.id);
+                    return (
+                      <label key={r.id} className="flex items-center gap-2 text-sm text-ink">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            set(f.key, e.target.checked ? [...values[f.key], r.id] : (values[f.key] as string[]).filter((x) => x !== r.id))
+                          }
+                          className="h-4 w-4 accent-primary"
+                        />
+                        {shorten(String(r[f.relation!.labelKey]))}
+                      </label>
+                    );
+                  })}
+                </div>
               ) : f.type === "checkbox" ? (
                 <input type="checkbox" checked={!!values[f.key]} onChange={(e) => set(f.key, e.target.checked)} className="h-4 w-4 accent-primary" />
               ) : (

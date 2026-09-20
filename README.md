@@ -119,6 +119,26 @@ lib/
 - Sending real emails for the contact form / password reset (currently
   logs to the server console — see `app/api/contact/route.ts`)
 
+## AI features and providers
+
+Writing feedback, speaking feedback and the AI tutor all go through one provider interface (`lib/ai/`). Pick the service in `.env.local` with `AI_PROVIDER`:
+
+| `AI_PROVIDER` | Service | Cost | Key variable |
+| --- | --- | --- | --- |
+| `gemini` | Google Gemini | free tier | `GEMINI_API_KEY` |
+| `groq` | Groq (Llama models) | free tier | `GROQ_API_KEY` |
+| `openrouter` | OpenRouter (`:free` models) | free tier | `OPENROUTER_API_KEY` |
+| `ollama` | Ollama running on your computer | free | none |
+| `custom` | any OpenAI-compatible service | varies | `AI_BASE_URL`, `AI_MODEL`, optional `AI_API_KEY` |
+| `anthropic` | Claude | paid (the default if `AI_PROVIDER` is unset) | `ANTHROPIC_API_KEY` |
+| `mock` | placeholder text, development only | free | none |
+
+- Set `AI_MODEL` to change the model used by the free providers. Free-tier model names change over time, so update it if a provider reports the model is not found.
+- To move to Claude later, set `AI_PROVIDER=anthropic` (and keep `ANTHROPIC_API_KEY`).
+- With no key set, the AI features show "unavailable" and the rest of the app works normally. `GET /api/ai/health` (signed in) reports which provider is active and whether it responds.
+- Free tiers have rate limits, and some providers may use content sent to their free tier to improve their models. That is fine for development and demos; check the provider's terms before using it with real students' essays or recordings' transcripts.
+- Scores from any provider are AI estimates, never official IELTS scores.
+
 ## Scripts
 
 - `npm run dev` — start the dev server

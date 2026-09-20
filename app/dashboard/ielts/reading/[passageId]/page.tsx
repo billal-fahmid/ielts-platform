@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPassage, getQuestionsForPassage, startOrResumeAttempt } from "@/lib/services/reading";
+import { readingRunnerProps } from "@/lib/services/runner-props";
 import { ReadingRunner } from "@/components/ielts/reading-runner";
-import type { RunnerQuestion } from "@/components/ielts/question-renderer";
 
 export default async function ReadingTestPage({ params }: { params: Promise<{ passageId: string }> }) {
   const { passageId } = await params;
@@ -11,32 +11,10 @@ export default async function ReadingTestPage({ params }: { params: Promise<{ pa
 
   const passage = getPassage(passageId);
   if (!passage || !passage.published) notFound();
+  if (getQuestionsForPassage(passageId).length === 0) notFound();
 
-  const questions = getQuestionsForPassage(passageId);
   const attempt = startOrResumeAttempt(userId, passageId);
 
-  // Never send correctAnswer/explanation to the client before submission.
-  const runnerQuestions: RunnerQuestion[] = questions.map((q) => ({
-    id: q.id,
-    questionType: q.questionType,
-    prompt: q.prompt,
-    content: q.content as Record<string, unknown>,
-    order: q.order,
-    points: q.points,
-  }));
-
-  return (
-    <ReadingRunner
-      attemptId={attempt.id}
-      passage={{
-        title: passage.title,
-        testType: passage.testType,
-        timeLimitSeconds: passage.timeLimitSeconds,
-        bodyText: passage.bodyText,
-      }}
-      questions={runnerQuestions}
-      initialAnswers={(attempt.answers as Record<string, unknown>) ?? {}}
-      initialTimeSpentSeconds={attempt.timeSpentSeconds}
-    />
-  );
+  // Never sends correct answers or explanations to the client before submission.
+  return <ReadingRunner {...readingRunnerProps(attempt)} />;
 }
