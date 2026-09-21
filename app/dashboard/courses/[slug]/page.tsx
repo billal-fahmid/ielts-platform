@@ -1,3 +1,4 @@
+import { checkoutHref } from "@/lib/plans/checkout";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
@@ -42,8 +43,8 @@ export default async function DashboardCourseDetailPage({ params }: { params: Pr
               <Lock className="h-4 w-4 text-primary" /> Included from the {requiredPlan?.name ?? course.requiredPlan} plan
             </p>
             <p className="text-xs text-ink-soft">You&apos;re on the {ent.plan.name} plan.</p>
-            <LinkButton href="/dashboard/billing" size="sm">
-              See plans
+            <LinkButton href={checkoutHref(requiredPlan?.code ?? "BASIC", "monthly", course.id)} size="sm">
+              Upgrade to {requiredPlan?.name ?? "Basic"}
             </LinkButton>
           </div>
         ) : (

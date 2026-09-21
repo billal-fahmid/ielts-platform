@@ -157,6 +157,18 @@ Writing feedback, speaking feedback and the AI tutor all go through one provider
 - **Subscriptions:** `/admin/subscriptions` grants, extends and ends plans. Plans end on their own; students get a reminder three days before and a notice when it ends. Until online payments are switched on, the Upgrade buttons lead to the contact form pre-filled with the plan (`lib/plans/checkout.ts`).
 - Existing installs: every account without a subscription is on the Free plan. Grant the plans your current students should keep from `/admin/subscriptions`.
 
+## Payments and coupons (Milestone 3)
+
+Payments never complete on the student's say-so. A plan starts only when an admin approves a reported payment, or when a payment provider's own verified callback confirms it.
+
+- **Manual payments (work today, no merchant account needed):** the student picks bKash, Nagad, Rocket or bank transfer, sends the money to an account you set up under **Admin → Payment accounts**, then reports the transaction ID and their number. You check it against your statement at **Admin → Payments** and approve or reject (with a reason). A wallet transaction ID can be used only once. Unreported payments close after 24 hours. **The seeded demo accounts are fake: replace them before you go live.**
+- **Statuses:** PENDING → PROCESSING → COMPLETED, or FAILED. A completed payment can become REFUNDED (this ends the plan; you return the money yourself). Only these moves are allowed, so a repeated or forged callback can't revive a failed payment.
+- **Cards and gateways:** `lib/payments/` has a `PaymentProvider` interface. `sslcommerz` (cards) turns on when `SSLCOMMERZ_STORE_ID` and `SSLCOMMERZ_STORE_PASSWORD` are set (`SSLCOMMERZ_SANDBOX=false` for live). It was built from the public API description and tested against a stand-in server: run a sandbox payment before going live. Its callback is only trusted after SSLCommerz's validation API confirms it.
+- **Signed callbacks:** any gateway or bridge can report payments to `POST /api/webhooks/payments/signed` with `x-timestamp` (unix seconds) and `x-signature` = hex HMAC-SHA256 of `<timestamp>.<raw body>` using `PAYMENT_WEBHOOK_SECRET` (16+ characters). Body: `{"eventId","type":"payment.succeeded|payment.failed|payment.refunded","reference":"<transaction id>","amount","currency"}`. Requests older than 5 minutes are refused, each `eventId` is applied once, and the amount and currency must match.
+- **Coupons** (**Admin → Coupons**): percentage or fixed discount, optional cap, minimum purchase, start and end dates, total and per-student limits, plan-specific and course-specific (works only when checkout starts from that course). A coupon is held while a payment is open and released if it fails or is cancelled. A 100% coupon activates the plan at once and is recorded as "Free with coupon".
+- Buying a lower plan than the one you have is blocked; paying for the same plan adds days; a higher plan replaces the current one straight away.
+- Environment variables are read on the server only and are never sent to the browser.
+
 ## Scripts
 
 - `npm run dev` — start the dev server

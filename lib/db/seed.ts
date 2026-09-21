@@ -24,6 +24,8 @@ import {
   notifications,
   plans,
   subscriptions,
+  coupons,
+  paymentAccounts,
 } from "./schema";
 import { careerCourses } from "./career-content";
 import bcrypt from "bcryptjs";
@@ -77,6 +79,11 @@ async function main() {
     "mock_test_attempts",
     "mock_tests",
     // Platform (Milestone 3)
+    "payment_events",
+    "coupon_redemptions",
+    "transactions",
+    "coupons",
+    "payment_accounts",
     "subscriptions",
     "plans",
     "notifications",
@@ -1215,6 +1222,24 @@ The library also offers free Wi-Fi, a children's story hour every Saturday morni
       startedAt: new Date().toISOString(),
       currentPeriodEnd: new Date(Date.now() + 90 * 86_400_000).toISOString(),
     })
+    .run();
+
+  // ---------- DEMO PAYMENT SETUP (replace with your real accounts in the admin panel) ----------
+  db.insert(paymentAccounts)
+    .values([
+      { id: uid(), method: "BKASH", accountName: "BanglaEnglish (DEMO - not real)", accountNumber: "01700000001", instructions: "Use Send Money and write your email in the reference.", order: 0, active: true },
+      { id: uid(), method: "NAGAD", accountName: "BanglaEnglish (DEMO - not real)", accountNumber: "01700000002", order: 1, active: true },
+      { id: uid(), method: "ROCKET", accountName: "BanglaEnglish (DEMO - not real)", accountNumber: "017000000023", order: 2, active: true },
+      { id: uid(), method: "BANK_TRANSFER", accountName: "BanglaEnglish Ltd (DEMO - not real)", accountNumber: "1234567890123", bankName: "Demo Bank", branch: "Mymensingh", order: 3, active: true },
+    ])
+    .run();
+  const jobInterview = db.select().from(courses).all().find((c) => c.slug === "job-interview-english");
+  db.insert(coupons)
+    .values([
+      { id: uid(), code: "IELTS20", description: "20% off any paid plan", type: "PERCENT", value: 20, maxDiscount: 500, perUserLimit: 1, planCodes: [], courseIds: [], active: true },
+      { id: uid(), code: "SAVE100", description: "৳100 off Basic", type: "FIXED", value: 100, minAmount: 299, perUserLimit: 1, planCodes: ["BASIC"], courseIds: [], active: true },
+      { id: uid(), code: "CAREER25", description: "25% off when you upgrade from Job Interview English", type: "PERCENT", value: 25, perUserLimit: 1, planCodes: [], courseIds: jobInterview ? [jobInterview.id] : [], active: true },
+    ])
     .run();
 
   console.log("Seed complete.");

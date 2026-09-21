@@ -7,6 +7,8 @@ import { LinkButton } from "@/components/ui/button";
 import { getEntitlements, listPlans, listUserSubscriptions, quizAttemptsToday, vocabularyWordsToday } from "@/lib/services/plans";
 import { PLAN_FEATURES, FEATURE_LABELS, formatTaka } from "@/lib/plans/features";
 import { checkoutHref } from "@/lib/plans/checkout";
+import { listUserTransactions, receiptNumber } from "@/lib/services/payments";
+import { METHOD_LABELS, STATUS_LABELS, STATUS_TONES } from "@/lib/payments/types";
 
 export const metadata = { title: "My plan — BanglaEnglish" };
 
@@ -20,6 +22,7 @@ export default async function BillingPage() {
   const all = listPlans({ onlyPublished: true });
   const upgrades = all.filter((p) => p.rank > ent.plan.rank);
   const history = listUserSubscriptions(userId);
+  const payments = listUserTransactions(userId, 10);
   const daysLeft = ent.subscription ? Math.max(0, Math.ceil((new Date(ent.subscription.currentPeriodEnd).getTime() - Date.now()) / 86_400_000)) : null;
 
   const vocabUsed = vocabularyWordsToday(userId).length;
@@ -104,6 +107,44 @@ export default async function BillingPage() {
           <p className="mt-3 text-xs text-ink-soft">
             Not sure which plan? <Link href="/pricing" className="text-primary underline">Compare all plans</Link>.
           </p>
+        </section>
+      )}
+
+      {payments.length > 0 && (
+        <section aria-labelledby="payments-heading">
+          <h2 id="payments-heading" className="font-display text-lg text-ink">
+            Payments
+          </h2>
+          <Card className="mt-3 overflow-x-auto p-0">
+            <table className="w-full text-sm" data-testid="payments-list">
+              <thead>
+                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="px-4 py-3 font-medium">Receipt</th>
+                  <th className="px-4 py-3 font-medium">Plan</th>
+                  <th className="px-4 py-3 font-medium">Amount</th>
+                  <th className="px-4 py-3 font-medium">Method</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map(({ tx, plan }) => (
+                  <tr key={tx.id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <Link href={`/dashboard/billing/payments/${tx.id}`} className="font-mono text-xs text-primary hover:underline">
+                        {receiptNumber(tx)}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-ink">{plan.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-ink">{formatTaka(tx.amount)}</td>
+                    <td className="px-4 py-3 text-ink-soft">{METHOD_LABELS[tx.method]}</td>
+                    <td className="px-4 py-3">
+                      <Badge tone={STATUS_TONES[tx.status]}>{STATUS_LABELS[tx.status]}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
         </section>
       )}
 

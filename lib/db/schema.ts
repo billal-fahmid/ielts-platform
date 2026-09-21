@@ -704,6 +704,120 @@ export const subscriptions = sqliteTable(
   (t) => [index("subscriptions_user_idx").on(t.userId, t.status), index("subscriptions_end_idx").on(t.currentPeriodEnd)]
 );
 
+// ---------- PAYMENTS AND COUPONS ----------
+/** Where students send money for manual (bKash / Nagad / Rocket / bank) payments. Edited by admins. */
+export const paymentAccounts = sqliteTable("payment_accounts", {
+  id: text("id").primaryKey(),
+  method: text("method", { enum: ["BKASH", "NAGAD", "ROCKET", "BANK_TRANSFER"] }).notNull(),
+  accountName: text("account_name").notNull(),
+  /** Mobile wallet number or bank account number. */
+  accountNumber: text("account_number").notNull(),
+  bankName: text("bank_name"),
+  branch: text("branch"),
+  instructions: text("instructions"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  order: integer("order").notNull().default(0),
+});
+
+export const coupons = sqliteTable("coupons", {
+  id: text("id").primaryKey(),
+  /** Upper-case code students type, e.g. IELTS20. */
+  code: text("code").notNull().unique(),
+  description: text("description"),
+  type: text("type", { enum: ["PERCENT", "FIXED"] }).notNull(),
+  /** Percent (1-100) or a fixed amount in taka. */
+  value: integer("value").notNull(),
+  /** Caps a percentage discount, in taka. */
+  maxDiscount: integer("max_discount"),
+  /** The price before discount must be at least this many taka. */
+  minAmount: integer("min_amount"),
+  startsAt: text("starts_at"),
+  expiresAt: text("expires_at"),
+  /** Total number of times it can be used. Empty means unlimited. */
+  usageLimit: integer("usage_limit"),
+  perUserLimit: integer("per_user_limit").notNull().default(1),
+  /** Only these plan codes. Empty means every paid plan. */
+  planCodes: text("plan_codes", { mode: "json" }).$type<string[]>().notNull().default([]),
+  /** Only when checkout started from one of these courses. Empty means anywhere. */
+  courseIds: text("course_ids", { mode: "json" }).$type<string[]>().notNull().default([]),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const transactions = sqliteTable(
+  "transactions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    planId: text("plan_id").notNull(),
+    period: text("period", { enum: ["MONTHLY", "YEARLY"] }).notNull(),
+    /** How many days of access this payment buys. */
+    days: integer("days").notNull(),
+    /** List price, discount and final price in whole taka. */
+    baseAmount: integer("base_amount").notNull(),
+    discountAmount: integer("discount_amount").notNull().default(0),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("BDT"),
+    couponId: text("coupon_id"),
+    couponCode: text("coupon_code"),
+    /** The course page the student came from, used for course-specific coupons. */
+    courseId: text("course_id"),
+    method: text("method", { enum: ["BKASH", "NAGAD", "ROCKET", "BANK_TRANSFER", "CARD", "COUPON"] }).notNull(),
+    /** Which integration handles it: manual, sslcommerz, or none (free with a coupon). */
+    provider: text("provider").notNull(),
+    status: text("status", { enum: ["PENDING", "PROCESSING", "COMPLETED", "FAILED", "REFUNDED"] }).notNull().default("PENDING"),
+    /** The wallet TrxID, bank reference or gateway reference. */
+    providerReference: text("provider_reference"),
+    senderNumber: text("sender_number"),
+    failureReason: text("failure_reason"),
+    submittedAt: text("submitted_at"),
+    verifiedAt: text("verified_at"),
+    verifiedBy: text("verified_by"),
+    refundedAt: text("refunded_at"),
+    refundedBy: text("refunded_by"),
+    refundReason: text("refund_reason"),
+    /** The subscription this payment created. */
+    subscriptionId: text("subscription_id"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [
+    index("transactions_user_idx").on(t.userId, t.createdAt),
+    index("transactions_status_idx").on(t.status, t.createdAt),
+    // A wallet TrxID can only be used once, unless the earlier attempt was rejected.
+    uniqueIndex("transactions_reference_uq").on(t.method, t.providerReference).where(sql`status != 'FAILED' AND provider_reference IS NOT NULL`),
+  ]
+);
+
+export const couponRedemptions = sqliteTable(
+  "coupon_redemptions",
+  {
+    id: text("id").primaryKey(),
+    couponId: text("coupon_id").notNull(),
+    userId: text("user_id").notNull(),
+    transactionId: text("transaction_id").notNull().unique(),
+    discountAmount: integer("discount_amount").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("coupon_redemptions_coupon_idx").on(t.couponId, t.userId)]
+);
+
+/** Every payment notification a gateway sends us, so a repeated one is never applied twice. */
+export const paymentEvents = sqliteTable(
+  "payment_events",
+  {
+    id: text("id").primaryKey(),
+    provider: text("provider").notNull(),
+    eventId: text("event_id").notNull(),
+    type: text("type").notNull(),
+    transactionId: text("transaction_id"),
+    outcome: text("outcome", { enum: ["APPLIED", "IGNORED", "REJECTED"] }).notNull(),
+    note: text("note"),
+    receivedAt: text("received_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("payment_events_uq").on(t.provider, t.eventId)]
+);
+
 // ---------- RELATIONS (for query convenience) ----------
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles, { fields: [users.id], references: [profiles.userId] }),

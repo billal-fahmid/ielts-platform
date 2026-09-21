@@ -19,11 +19,16 @@ import {
   mockTests,
   mockTestAttempts,
   plans,
+  coupons,
+  couponRedemptions,
+  paymentAccounts,
 } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { id as newId, slugify } from "@/lib/utils";
 import { resourceMeta, type FieldConfig } from "@/lib/admin/field-config";
 import { PLAN_FEATURES } from "@/lib/plans/features";
+import { normalizeWalletNumber } from "@/lib/payments/validation";
+import { normalizeCouponCode } from "@/lib/payments/pricing";
 import { mockTestProblems } from "@/lib/services/mock-test";
 import { TASK1_CATEGORIES, TASK2_CATEGORIES, countWords } from "@/lib/ielts/writing";
 
@@ -44,6 +49,8 @@ const tables: Record<string, any> = {
   speakingPrompts,
   mockTests,
   plans,
+  coupons,
+  paymentAccounts,
 };
 
 const needsSlug = new Set(["courses", "modules", "lessons", "grammarTopics"]);
@@ -218,6 +225,51 @@ const hooks: Record<string, Hooks> = {
     },
   },
 
+  coupons: {
+    prepare: (data) => {
+      if (typeof data.code === "string") data.code = normalizeCouponCode(data.code);
+    },
+    validate: (m, { existing }) => {
+      if (!/^[A-Z0-9_-]{3,30}$/.test(m.code)) throw new ResourceError("The code must be 3 to 30 letters, numbers, - or _ (no spaces).");
+      if (!existing && db.select().from(coupons).where(eq(coupons.code, m.code)).get()) throw new ResourceError(`The code ${m.code} already exists.`);
+      if (m.type === "PERCENT" && (!Number.isInteger(m.value) || m.value < 1 || m.value > 100)) throw new ResourceError("A percentage discount must be a whole number from 1 to 100.");
+      if (m.type === "FIXED" && (!Number.isInteger(m.value) || m.value < 1 || m.value > 1_000_000)) throw new ResourceError("A fixed discount must be a whole number of taka, at least 1.");
+      for (const [key, label] of [["maxDiscount", "Largest discount"], ["minAmount", "Smallest purchase"], ["usageLimit", "Total uses"]] as const) {
+        const v = m[key];
+        if (v !== null && v !== undefined && (!Number.isInteger(v) || v < 1 || v > 10_000_000)) throw new ResourceError(`${label} must be a whole number of 1 or more, or empty.`);
+      }
+      if (m.maxDiscount != null && m.type !== "PERCENT") throw new ResourceError("A largest discount only applies to percentage coupons.");
+      if (!Number.isInteger(m.perUserLimit) || m.perUserLimit < 1 || m.perUserLimit > 100) throw new ResourceError("Uses per student must be a whole number from 1 to 100.");
+      const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z"));
+      for (const [key, label] of [["startsAt", "Starts on"], ["expiresAt", "Expires on"]] as const) {
+        if (m[key] && !isDate(m[key])) throw new ResourceError(`${label} must be a date like 2026-12-31.`);
+      }
+      if (m.startsAt && m.expiresAt && m.expiresAt < m.startsAt) throw new ResourceError("The coupon can't expire before it starts.");
+      for (const p of (m.planCodes as string[]) ?? []) if (!["BASIC", "PREMIUM", "PRO"].includes(p)) throw new ResourceError(`${p} isn't a paid plan.`);
+    },
+    beforeDelete: (id) => {
+      if (count(db.select().from(couponRedemptions).where(eq(couponRedemptions.couponId, id)).all()) > 0) {
+        throw new ResourceError("This coupon has been used, so it can't be deleted. Untick Active to stop it being used.");
+      }
+    },
+  },
+
+  paymentAccounts: {
+    prepare: (data) => {
+      if (typeof data.accountNumber === "string" && typeof data.method === "string" && data.method !== "BANK_TRANSFER") {
+        data.accountNumber = normalizeWalletNumber(data.method as "BKASH", data.accountNumber) ?? data.accountNumber;
+      }
+    },
+    validate: (m) => {
+      if (m.method === "BANK_TRANSFER") {
+        if (!/^[0-9A-Za-z\- ]{5,34}$/.test(m.accountNumber)) throw new ResourceError("Enter the bank account number (5 to 34 letters, numbers or dashes).");
+        if (!String(m.bankName ?? "").trim()) throw new ResourceError("Bank transfers need the bank's name.");
+      } else if (!normalizeWalletNumber(m.method, m.accountNumber)) {
+        throw new ResourceError("bKash, Nagad and Rocket accounts need a Bangladeshi mobile number like 01712345678 (Rocket accounts may have one extra digit).");
+      }
+    },
+  },
+
   speakingPrompts: {
     validate: (m) => {
       if (m.part !== "PART3" && String(m.followUpOfTopic ?? "").trim()) {
@@ -236,7 +288,7 @@ function sanitize(key: string, data: Record<string, any>, mode: "create" | "upda
   const out: Record<string, any> = {};
 
   for (const f of meta.fields as FieldConfig[]) {
-    if (f.readOnly) continue; // never taken from the request
+    if (f.readOnly && mode === "update") continue; // fixed once created
     if (f.nullable && Object.prototype.hasOwnProperty.call(data, f.key) && (data[f.key] === null || data[f.key] === "")) {
       out[f.key] = null;
       continue;

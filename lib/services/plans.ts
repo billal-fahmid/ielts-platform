@@ -183,12 +183,14 @@ export function grantSubscription(input: GrantInput, now = Date.now()): Subscrip
 }
 
 /** Ends a subscription immediately. */
-export function revokeSubscription(subscriptionId: string, now = Date.now()): Subscription | null {
+export function revokeSubscription(subscriptionId: string, now = Date.now(), opts: { silent?: boolean } = {}): Subscription | null {
   const s = db.select().from(subscriptions).where(eq(subscriptions.id, subscriptionId)).get();
   if (!s || s.status !== "ACTIVE") return null;
   db.update(subscriptions).set({ status: "CANCELLED", cancelledAt: new Date(now).toISOString() }).where(eq(subscriptions.id, s.id)).run();
   const plan = getPlanById(s.planId);
-  notify(s.userId, { type: "SUBSCRIPTION", title: `Your ${plan?.name ?? ""} plan was cancelled`.replace("  ", " "), body: "Contact us if you think this is a mistake.", url: "/dashboard/billing", email: true });
+  if (!opts.silent) {
+    notify(s.userId, { type: "SUBSCRIPTION", title: `Your ${plan?.name ?? ""} plan was cancelled`.replace("  ", " "), body: "Contact us if you think this is a mistake.", url: "/dashboard/billing", email: true });
+  }
   return db.select().from(subscriptions).where(eq(subscriptions.id, s.id)).get()!;
 }
 

@@ -241,8 +241,8 @@ function ResourceFormModal({
           .split("\n")
           .map((s) => s.trim())
           .filter(Boolean);
-      } else if (f.readOnly) {
-        // not sent
+      } else if (f.readOnly && initial) {
+        // not sent when editing
       } else if (f.type === "number") {
         payload[f.key] = values[f.key] === "" || values[f.key] === null ? (f.nullable ? null : undefined) : Number(values[f.key]);
       } else {
@@ -325,7 +325,7 @@ function ResourceFormModal({
                 <input type="checkbox" checked={!!values[f.key]} onChange={(e) => set(f.key, e.target.checked)} className="h-4 w-4 accent-primary" />
               ) : (
                 <>
-                  <Input type={f.type === "number" ? "number" : "text"} value={values[f.key] ?? ""} onChange={(e) => set(f.key, e.target.value)} required={f.required} readOnly={f.readOnly} disabled={f.readOnly} />
+                  <Input type={f.type === "number" ? "number" : "text"} value={values[f.key] ?? ""} onChange={(e) => set(f.key, e.target.value)} required={f.required} readOnly={f.readOnly && !!initial} disabled={f.readOnly && !!initial} />
                   {f.upload && <UploadButton kinds={f.upload.kinds} visibility={f.upload.visibility} onUploaded={(url) => set(f.key, url)} />}
                 </>
               )}

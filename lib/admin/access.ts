@@ -1,2 +1,2 @@
-/** Resources only administrators may touch: teachers must never see other people's accounts or change roles. */
-export const ADMIN_ONLY_RESOURCES = new Set(["users", "plans"]);
+/** Resources only administrators may touch: teachers must never see accounts, prices or payment details. */
+export const ADMIN_ONLY_RESOURCES = new Set(["users", "plans", "coupons", "paymentAccounts"]);

@@ -27,6 +27,9 @@ import {
   X,
   Crown,
   CreditCard,
+  Wallet,
+  Ticket,
+  Landmark,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -56,6 +59,9 @@ const links: NavItem[] = [
   { section: "Business", adminOnly: true },
   { href: "/admin/plans", label: "Plans and pricing", icon: Crown, adminOnly: true },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard, adminOnly: true },
+  { href: "/admin/payments", label: "Payments", icon: Wallet, adminOnly: true },
+  { href: "/admin/coupons", label: "Coupons", icon: Ticket, adminOnly: true },
+  { href: "/admin/paymentAccounts", label: "Payment accounts", icon: Landmark, adminOnly: true },
   { section: "System", adminOnly: true },
   { href: "/admin/notifications", label: "Announcements", icon: Megaphone, adminOnly: true },
   { href: "/admin/email-outbox", label: "Email log", icon: Mail, adminOnly: true },
