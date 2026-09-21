@@ -37,6 +37,8 @@ export const FEATURE_ROUTES: { prefix: string; feature: PlanFeature }[] = [
   { prefix: "/dashboard/ielts/listening", feature: "IELTS_PRACTICE" },
   { prefix: "/dashboard/ielts/reading", feature: "IELTS_PRACTICE" },
   { prefix: "/dashboard/ielts/plan", feature: "IELTS_PRACTICE" },
+  { prefix: "/dashboard/reviews", feature: "TEACHER_FEEDBACK" },
+  { prefix: "/dashboard/speaking-sessions", feature: "ONE_ON_ONE" },
 ];
 
 export const formatTaka = (amount: number) => `৳${amount.toLocaleString("en-US")}`;

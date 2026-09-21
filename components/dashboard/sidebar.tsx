@@ -19,6 +19,9 @@ import {
   Home,
   Lock,
   Crown,
+  ClipboardList,
+  MessageSquareText,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +32,9 @@ const links = [
   { href: "/dashboard/tutor", label: "AI Tutor", icon: Bot, mobileNav: false },
   { href: "/dashboard/assessment", label: "Assessment", icon: ClipboardCheck, mobileNav: false },
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen, mobileNav: true },
+  { href: "/dashboard/assignments", label: "Assignments", icon: ClipboardList, mobileNav: false },
+  { href: "/dashboard/reviews", label: "Teacher feedback", icon: MessageSquareText, mobileNav: false },
+  { href: "/dashboard/speaking-sessions", label: "1-on-1 speaking", icon: Video, mobileNav: false },
   { href: "/dashboard/grammar", label: "Grammar Lab", icon: Layers, mobileNav: false },
   { href: "/dashboard/vocabulary", label: "Vocabulary", icon: Sparkles, mobileNav: true },
   { href: "/dashboard/flashcards", label: "Flashcards", icon: Sparkles, mobileNav: false },
@@ -44,7 +50,7 @@ const mobileLinks = [
   { href: "/dashboard/courses", label: "Learn", icon: BookOpen, match: (p: string) => p.startsWith("/dashboard/courses") || p.startsWith("/dashboard/grammar") },
   { href: "/dashboard/ielts", label: "IELTS", icon: Target, match: (p: string) => p.startsWith("/dashboard/ielts") },
   { href: "/dashboard/practice", label: "Practice", icon: Dumbbell, match: (p: string) => ["/dashboard/practice", "/dashboard/tutor", "/dashboard/vocabulary", "/dashboard/flashcards"].some((x) => p.startsWith(x)) },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, match: (p: string) => p === "/dashboard" || ["/dashboard/progress", "/dashboard/profile", "/dashboard/notifications", "/dashboard/assessment"].some((x) => p.startsWith(x)) },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, match: (p: string) => p === "/dashboard" || ["/dashboard/progress", "/dashboard/profile", "/dashboard/notifications", "/dashboard/assessment", "/dashboard/assignments", "/dashboard/reviews", "/dashboard/speaking-sessions"].some((x) => p.startsWith(x)) },
 ];
 
 export function DashboardSidebar({ lockedPrefixes = [] }: { lockedPrefixes?: string[] }) {

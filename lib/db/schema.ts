@@ -63,6 +63,8 @@ export const courses = sqliteTable("courses", {
   published: integer("published", { mode: "boolean" }).notNull().default(true),
   /** Code of the cheapest plan that can open this course (see plans). */
   requiredPlan: text("required_plan").notNull().default("FREE"),
+  /** The teacher who created and manages the course. Empty for platform-owned courses (admins manage those). */
+  ownerId: text("owner_id"),
 });
 
 export const modules = sqliteTable("modules", {
@@ -890,3 +892,136 @@ export const aiTutorMessagesRelations = relations(aiTutorMessages, ({ one }) => 
 export const mockTestsRelations = relations(mockTests, ({ one }) => ({
   listeningTest: one(listeningTests, { fields: [mockTests.listeningTestId], references: [listeningTests.id] }),
 }));
+
+// ---------- TEACHING: BATCHES AND ASSIGNMENTS ----------
+export const batches = sqliteTable(
+  "batches",
+  {
+    id: text("id").primaryKey(),
+    teacherId: text("teacher_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    /** The course this batch follows, if any. */
+    courseId: text("course_id"),
+    capacity: integer("capacity"),
+    startsOn: text("starts_on"),
+    endsOn: text("ends_on"),
+    status: text("status", { enum: ["ACTIVE", "ARCHIVED"] }).notNull().default("ACTIVE"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("batches_teacher_idx").on(t.teacherId)]
+);
+
+export const batchMembers = sqliteTable(
+  "batch_members",
+  {
+    id: text("id").primaryKey(),
+    batchId: text("batch_id").notNull(),
+    studentId: text("student_id").notNull(),
+    joinedAt: text("joined_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("batch_members_uq").on(t.batchId, t.studentId), index("batch_members_student_idx").on(t.studentId)]
+);
+
+export const assignments = sqliteTable(
+  "assignments",
+  {
+    id: text("id").primaryKey(),
+    teacherId: text("teacher_id").notNull(),
+    /** Who it is for: every member of the batch, or every student enrolled in the course (at least one is set). */
+    batchId: text("batch_id"),
+    courseId: text("course_id"),
+    title: text("title").notNull(),
+    instructions: text("instructions").notNull(),
+    /** Optional teacher-uploaded file (worksheet, audio...). */
+    attachmentUrl: text("attachment_url"),
+    dueAt: text("due_at"),
+    maxScore: integer("max_score").notNull().default(100),
+    published: integer("published", { mode: "boolean" }).notNull().default(false),
+    /** When students were first told about it, so publishing again doesn't notify them twice. */
+    publishedAt: text("published_at"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("assignments_teacher_idx").on(t.teacherId), index("assignments_batch_idx").on(t.batchId), index("assignments_course_idx").on(t.courseId)]
+);
+
+export const assignmentSubmissions = sqliteTable(
+  "assignment_submissions",
+  {
+    id: text("id").primaryKey(),
+    assignmentId: text("assignment_id").notNull(),
+    studentId: text("student_id").notNull(),
+    answerText: text("answer_text").notNull().default(""),
+    /** Optional link (Google Drive, YouTube...) — students can't upload files. */
+    linkUrl: text("link_url"),
+    status: text("status", { enum: ["SUBMITTED", "GRADED"] }).notNull().default("SUBMITTED"),
+    score: integer("score"),
+    feedback: text("feedback"),
+    submittedAt: text("submitted_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    gradedAt: text("graded_at"),
+    gradedBy: text("graded_by"),
+  },
+  (t) => [uniqueIndex("assignment_submissions_uq").on(t.assignmentId, t.studentId), index("assignment_submissions_student_idx").on(t.studentId)]
+);
+
+// ---------- HUMAN REVIEWS: WRITING AND SPEAKING ----------
+/** A student's request for a teacher to review one essay. Teachers pick requests up from a shared queue. */
+export const writingReviews = sqliteTable(
+  "writing_reviews",
+  {
+    id: text("id").primaryKey(),
+    submissionId: text("submission_id").notNull(),
+    studentId: text("student_id").notNull(),
+    /** Empty while the request is waiting in the queue. */
+    teacherId: text("teacher_id"),
+    status: text("status", { enum: ["REQUESTED", "IN_REVIEW", "COMPLETED", "CANCELLED"] }).notNull().default("REQUESTED"),
+    /** What the student wants the teacher to look at. */
+    studentNote: text("student_note"),
+    /** The teacher's own estimate (0 to 9 in half bands), never an official score. */
+    bandEstimate: real("band_estimate"),
+    taskResponseFeedback: text("task_response_feedback"),
+    coherenceFeedback: text("coherence_feedback"),
+    vocabularyFeedback: text("vocabulary_feedback"),
+    grammarFeedback: text("grammar_feedback"),
+    overallComments: text("overall_comments"),
+    requestedAt: text("requested_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    claimedAt: text("claimed_at"),
+    completedAt: text("completed_at"),
+  },
+  (t) => [index("writing_reviews_status_idx").on(t.status), index("writing_reviews_teacher_idx").on(t.teacherId), index("writing_reviews_student_idx").on(t.studentId), index("writing_reviews_submission_idx").on(t.submissionId)]
+);
+
+/**
+ * A one-to-one speaking session. A teacher publishes a time slot (OPEN); a student books it (BOOKED); the
+ * teacher starts it, keeps notes, scores it and leaves feedback (COMPLETED).
+ */
+export const speakingSlots = sqliteTable(
+  "speaking_slots",
+  {
+    id: text("id").primaryKey(),
+    teacherId: text("teacher_id").notNull(),
+    /** Start time in UTC (ISO). Shown to everyone in Bangladesh time. */
+    startsAt: text("starts_at").notNull(),
+    durationMinutes: integer("duration_minutes").notNull().default(15),
+    /** Where the two meet (Zoom, Meet...). Live video is not built into the platform. */
+    meetingUrl: text("meeting_url").notNull(),
+    status: text("status", { enum: ["OPEN", "BOOKED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"] }).notNull().default("OPEN"),
+    studentId: text("student_id"),
+    bookedAt: text("booked_at"),
+    /** What the student wants to practise. */
+    studentNote: text("student_note"),
+    startedAt: text("started_at"),
+    completedAt: text("completed_at"),
+    /** Private to the teacher; the student never sees it. */
+    teacherNotes: text("teacher_notes"),
+    fluencyBand: real("fluency_band"),
+    lexicalBand: real("lexical_band"),
+    grammarBand: real("grammar_band"),
+    pronunciationBand: real("pronunciation_band"),
+    overallBand: real("overall_band"),
+    feedback: text("feedback"),
+    cancelReason: text("cancel_reason"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("speaking_slots_teacher_idx").on(t.teacherId, t.startsAt), index("speaking_slots_student_idx").on(t.studentId), index("speaking_slots_status_idx").on(t.status, t.startsAt)]
+);

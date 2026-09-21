@@ -9,6 +9,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const role = (session?.user as any)?.role;
   if (!session?.user) redirect("/login");
   if (role !== "ADMIN" && role !== "TEACHER") redirect("/dashboard");
+  // Teachers have their own console; the admin console is for administrators.
+  if (role === "TEACHER") redirect("/teacher");
 
   return (
     <div className="flex min-h-screen flex-col">

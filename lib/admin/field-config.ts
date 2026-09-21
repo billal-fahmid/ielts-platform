@@ -21,6 +21,8 @@ export type FieldConfig = {
    * `labelKey` is the column shown to the admin; `filter` limits the choices to records whose column equals the value.
    */
   relation?: { resource: string; labelKey: string; filter?: { key: string; value: string } };
+  /** Teachers don't see or set this field (admins decide it), for example which plan a course needs. */
+  teacherHidden?: boolean;
   /** For type "text": also offer to upload a file, and fill the field with its link. */
   upload?: { kinds: ("VIDEO" | "AUDIO" | "IMAGE" | "DOCUMENT")[]; visibility?: "PUBLIC" | "MEMBERS" };
 };
@@ -43,7 +45,7 @@ export const resourceMeta: Record<string, ResourceMeta> = {
       { key: "description", label: "Description", type: "textarea", required: true },
       { key: "category", label: "Category", type: "select", options: ["BEGINNER", "ELEMENTARY", "INTERMEDIATE", "ADVANCED"], required: true },
       { key: "track", label: "Track", type: "select", options: ["ENGLISH", "IELTS", "CAREER"], required: true },
-      { key: "requiredPlan", label: "Cheapest plan that includes it", type: "select", options: [...PLAN_CODES], required: true, hint: "Students on a lower plan see it as locked." },
+      { key: "requiredPlan", label: "Cheapest plan that includes it", type: "select", options: [...PLAN_CODES], required: true, hint: "Students on a lower plan see it as locked.", teacherHidden: true },
       { key: "image", label: "Image path", type: "text", upload: { kinds: ["IMAGE"], visibility: "PUBLIC" } },
       { key: "order", label: "Order", type: "number" },
       { key: "published", label: "Published", type: "checkbox" },
@@ -53,7 +55,7 @@ export const resourceMeta: Record<string, ResourceMeta> = {
     label: "Modules",
     listColumns: ["title", "courseId", "order"],
     fields: [
-      { key: "courseId", label: "Course ID", type: "text", required: true },
+      { key: "courseId", label: "Course", type: "relation", relation: { resource: "courses", labelKey: "title" }, required: true },
       { key: "title", label: "Title", type: "text", required: true },
       { key: "order", label: "Order", type: "number" },
     ],
@@ -62,7 +64,7 @@ export const resourceMeta: Record<string, ResourceMeta> = {
     label: "Lessons",
     listColumns: ["title", "moduleId", "xpReward", "order"],
     fields: [
-      { key: "moduleId", label: "Module ID", type: "text", required: true },
+      { key: "moduleId", label: "Module", type: "relation", relation: { resource: "modules", labelKey: "_label" }, required: true },
       { key: "title", label: "Title", type: "text", required: true },
       { key: "description", label: "Description", type: "textarea" },
       { key: "content", label: "Content", type: "textarea", required: true },
@@ -102,16 +104,16 @@ export const resourceMeta: Record<string, ResourceMeta> = {
     listColumns: ["title", "type"],
     fields: [
       { key: "title", label: "Title", type: "text", required: true },
-      { key: "type", label: "Type", type: "select", options: ["LESSON", "GRAMMAR", "ASSESSMENT", "MOCK_TEST"], required: true },
-      { key: "lessonId", label: "Lesson ID (optional)", type: "text" },
-      { key: "grammarTopicId", label: "Grammar Topic ID (optional)", type: "text" },
+      { key: "type", label: "Type", type: "select", options: ["LESSON", "GRAMMAR", "ASSESSMENT", "MOCK_TEST"], required: true, teacherHidden: true },
+      { key: "lessonId", label: "Lesson", type: "relation", relation: { resource: "lessons", labelKey: "_label" }, nullable: true, hint: "The lesson this quiz appears in." },
+      { key: "grammarTopicId", label: "Grammar Topic ID (optional)", type: "text", teacherHidden: true },
     ],
   },
   questions: {
     label: "Questions",
     listColumns: ["prompt", "type", "quizId"],
     fields: [
-      { key: "quizId", label: "Quiz ID", type: "text", required: true },
+      { key: "quizId", label: "Quiz", type: "relation", relation: { resource: "quizzes", labelKey: "_label" }, required: true },
       { key: "type", label: "Type", type: "select", options: ["MCQ", "TRUE_FALSE", "FILL_BLANK"], required: true },
       { key: "prompt", label: "Prompt", type: "textarea", required: true },
       { key: "options", label: "Options (one per line)", type: "json-list" },

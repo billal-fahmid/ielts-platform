@@ -22,6 +22,11 @@ import {
   coupons,
   couponRedemptions,
   paymentAccounts,
+  enrollments,
+  progress,
+  quizAttempts,
+  batches,
+  assignments,
 } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { id as newId, slugify } from "@/lib/utils";
@@ -83,6 +88,69 @@ function assertNotInMockTest(kind: string, id: string) {
 }
 
 const hooks: Record<string, Hooks> = {
+  // Course content is a tree (course → modules → lessons → quiz → questions). Deleting a parent that still has children
+  // would leave orphans, and deleting anything students have used would erase their progress.
+  courses: {
+    beforeDelete: (id) => {
+      const moduleCount = count(db.select().from(modules).where(eq(modules.courseId, id)).all());
+      if (moduleCount > 0) throw new ResourceError(`This course has ${moduleCount} module${moduleCount === 1 ? "" : "s"}. Delete them first.`);
+      if (count(db.select().from(enrollments).where(eq(enrollments.courseId, id)).all()) > 0) {
+        throw new ResourceError("Students are enrolled in this course, so it can't be deleted. Untick Published to hide it instead.");
+      }
+      const inUse = db.select().from(batches).where(eq(batches.courseId, id)).get() ?? db.select().from(assignments).where(eq(assignments.courseId, id)).get();
+      if (inUse) throw new ResourceError("A batch or assignment uses this course. Remove those first, or untick Published to hide the course.");
+    },
+  },
+
+  modules: {
+    beforeDelete: (id) => {
+      const lessonCount = count(db.select().from(lessons).where(eq(lessons.moduleId, id)).all());
+      if (lessonCount > 0) throw new ResourceError(`This module has ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}. Delete them first.`);
+    },
+  },
+
+  lessons: {
+    validate: (m) => {
+      if (m.xpReward != null && (!Number.isInteger(m.xpReward) || m.xpReward < 0 || m.xpReward > 100)) {
+        throw new ResourceError("XP reward must be a whole number from 0 to 100.");
+      }
+      if (m.videoUrl && !isSafeUrl(String(m.videoUrl))) throw new ResourceError("The video must be a path starting with “/” or a full http(s) URL.");
+      if (m.audioUrl && !isSafeUrl(String(m.audioUrl))) throw new ResourceError("The audio must be a path starting with “/” or a full http(s) URL.");
+    },
+    beforeDelete: (id) => {
+      if (db.select().from(quizzes).where(eq(quizzes.lessonId, id)).get()) throw new ResourceError("This lesson has a quiz. Delete the quiz first.");
+      if (db.select().from(progress).where(eq(progress.lessonId, id)).get()) {
+        throw new ResourceError("Students have already worked on this lesson, so it can't be deleted.");
+      }
+    },
+  },
+
+  quizzes: {
+    validate: (m) => {
+      if (m.type === "LESSON" && !m.lessonId) throw new ResourceError("A lesson quiz must belong to a lesson.");
+    },
+    beforeDelete: (id) => {
+      const questionCount = count(db.select().from(questions).where(eq(questions.quizId, id)).all());
+      if (questionCount > 0) throw new ResourceError(`This quiz has ${questionCount} question${questionCount === 1 ? "" : "s"}. Delete them first.`);
+      if (db.select().from(quizAttempts).where(eq(quizAttempts.quizId, id)).get()) throw new ResourceError("Students have already taken this quiz, so it can't be deleted.");
+    },
+  },
+
+  questions: {
+    prepare: (data) => {
+      // The quiz screen shows a true/false question from its options, so they always exist.
+      if (data.type === "TRUE_FALSE") data.options = ["True", "False"];
+    },
+    validate: (m) => {
+      const options: string[] = Array.isArray(m.options) ? m.options : [];
+      if (m.type === "MCQ") {
+        if (options.length < 2) throw new ResourceError("A multiple-choice question needs at least two options (one per line).");
+        if (!options.includes(m.correctAnswer)) throw new ResourceError("The correct answer must match one of the options exactly.");
+      }
+      if (m.type === "TRUE_FALSE" && !["True", "False"].includes(m.correctAnswer)) throw new ResourceError("For true/false questions the correct answer must be True or False.");
+    },
+  },
+
   readingPassages: {
     prepare: (data) => {
       if (typeof data.bodyText === "string") data.wordCount = countWords(data.bodyText);
@@ -362,11 +430,25 @@ function sanitize(key: string, data: Record<string, any>, mode: "create" | "upda
   return out;
 }
 
+/** A readable name for course-tree records in dropdowns: "Course › Module › Lesson". */
+function treeLabels(key: string): ((row: any) => string) | null {
+  if (key !== "modules" && key !== "lessons" && key !== "quizzes") return null;
+  const courseTitle = new Map(db.select().from(courses).all().map((c) => [c.id, c.title]));
+  const moduleRows = new Map(db.select().from(modules).all().map((m) => [m.id, m]));
+  const moduleLabel = (m: any) => (m ? `${courseTitle.get(m.courseId) ?? "?"} › ${m.title}` : "?");
+  const lessonRows = new Map(db.select().from(lessons).all().map((l) => [l.id, l]));
+  const lessonLabel = (l: any) => (l ? `${moduleLabel(moduleRows.get(l.moduleId))} › ${l.title}` : "?");
+  if (key === "modules") return moduleLabel;
+  if (key === "lessons") return lessonLabel;
+  return (q) => (q.lessonId ? `${q.title} (${lessonLabel(lessonRows.get(q.lessonId))})` : q.title);
+}
+
 export function listResource(key: string) {
   const table = tables[key];
   if (!table) return [];
+  const label = treeLabels(key);
   // Never send password hashes (or similar) to the browser, even to administrators.
-  return db.select().from(table).all().map(({ passwordHash, ...safe }: any) => safe);
+  return db.select().from(table).all().map(({ passwordHash, ...safe }: any) => (label ? { ...safe, _label: label(safe) } : safe));
 }
 
 function getExisting(key: string, id: string) {

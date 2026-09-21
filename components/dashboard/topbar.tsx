@@ -77,7 +77,7 @@ export function DashboardTopbar({
                 <Bell className="h-4 w-4" /> Notifications
               </Link>
               {(role === "ADMIN" || role === "TEACHER") && (
-                <Link href="/admin" onClick={() => setMenu(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-primary-soft">
+                <Link href={role === "ADMIN" ? "/admin" : "/teacher"} onClick={() => setMenu(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-primary-soft">
                   <ShieldCheck className="h-4 w-4" /> {role === "ADMIN" ? "Admin panel" : "Teaching"}
                 </Link>
               )}

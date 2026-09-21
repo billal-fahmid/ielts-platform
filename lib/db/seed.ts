@@ -26,6 +26,11 @@ import {
   subscriptions,
   coupons,
   paymentAccounts,
+  batches,
+  batchMembers,
+  assignments,
+  assignmentSubmissions,
+  speakingSlots,
 } from "./schema";
 import { careerCourses } from "./career-content";
 import bcrypt from "bcryptjs";
@@ -41,6 +46,12 @@ async function main() {
 
   // ---------- clear existing (idempotent dev seed) ----------
   const tables = [
+    "speaking_slots",
+    "writing_reviews",
+    "assignment_submissions",
+    "assignments",
+    "batch_members",
+    "batches",
     "user_badges",
     "assessment_results",
     "assessments",
@@ -343,7 +354,7 @@ async function main() {
   careerCourses.forEach((c, ci) => {
     const courseId = uid();
     db.insert(courses)
-      .values({ id: courseId, slug: c.slug, title: c.title, description: c.description, category: c.category, track: "CAREER", image: null, order: 100 + ci, published: true, requiredPlan: "BASIC" })
+      .values({ id: courseId, slug: c.slug, title: c.title, description: c.description, category: c.category, track: "CAREER", image: null, order: 100 + ci, published: true, requiredPlan: "BASIC", ownerId: teacherId })
       .run();
     const moduleId = uid();
     db.insert(modules).values({ id: moduleId, courseId, slug: `${c.slug}-m1`, title: c.moduleTitle, order: 0 }).run();
@@ -1212,12 +1223,12 @@ The library also offers free Wi-Fi, a children's story hour every Saturday morni
     ])
     .run();
 
-  // The demo student has the Premium plan so every feature can be tried; new sign-ups start on Free.
+  // The demo student has the Pro plan so every feature (including teacher feedback and 1-on-1 sessions) can be tried; new sign-ups start on Free.
   db.insert(subscriptions)
     .values({
       id: uid(),
       userId: studentId,
-      planId: planIds.PREMIUM,
+      planId: planIds.PRO,
       source: "ADMIN",
       startedAt: new Date().toISOString(),
       currentPeriodEnd: new Date(Date.now() + 90 * 86_400_000).toISOString(),
@@ -1239,6 +1250,37 @@ The library also offers free Wi-Fi, a children's story hour every Saturday morni
       { id: uid(), code: "IELTS20", description: "20% off any paid plan", type: "PERCENT", value: 20, maxDiscount: 500, perUserLimit: 1, planCodes: [], courseIds: [], active: true },
       { id: uid(), code: "SAVE100", description: "৳100 off Basic", type: "FIXED", value: 100, minAmount: 299, perUserLimit: 1, planCodes: ["BASIC"], courseIds: [], active: true },
       { id: uid(), code: "CAREER25", description: "25% off when you upgrade from Job Interview English", type: "PERCENT", value: 25, perUserLimit: 1, planCodes: [], courseIds: jobInterview ? [jobInterview.id] : [], active: true },
+    ])
+    .run();
+
+  // ---------- DEMO TEACHING: a batch and an assignment for the demo teacher ----------
+  const careerCourse = db.select().from(courses).all().find((c) => c.slug === "job-interview-english");
+  if (careerCourse) db.insert(enrollments).values({ id: uid(), userId: studentId, courseId: careerCourse.id }).run();
+  const batchId = uid();
+  db.insert(batches).values({ id: batchId, teacherId, name: "IELTS Evening Batch", description: "Evening group for students aiming at Band 7.", courseId: careerCourse?.id ?? null, capacity: 30 }).run();
+  db.insert(batchMembers).values({ id: uid(), batchId, studentId }).run();
+  const dueDate = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+  db.insert(assignments)
+    .values({
+      id: uid(),
+      teacherId,
+      batchId,
+      title: "Introduce yourself in an interview",
+      instructions: "Write about 150 words: how you would introduce yourself at the start of a job interview. Mention your studies, one strength and one goal.",
+      dueAt: dueDate,
+      maxScore: 10,
+      published: true,
+      publishedAt: new Date().toISOString(),
+    })
+    .run();
+
+  // ---------- DEMO SPEAKING SLOTS (Bangladesh time; replace the meeting link with your own) ----------
+  const slotAt = (daysAhead: number, hour: number) => new Date(Date.parse(new Date(Date.now() + daysAhead * 86_400_000).toISOString().slice(0, 10) + "T00:00:00+06:00") + hour * 3_600_000).toISOString();
+  db.insert(speakingSlots)
+    .values([
+      { id: uid(), teacherId, startsAt: slotAt(2, 16), durationMinutes: 15, meetingUrl: "https://example.com/replace-with-your-meeting-link" },
+      { id: uid(), teacherId, startsAt: slotAt(2, 17), durationMinutes: 15, meetingUrl: "https://example.com/replace-with-your-meeting-link" },
+      { id: uid(), teacherId, startsAt: slotAt(3, 16), durationMinutes: 30, meetingUrl: "https://example.com/replace-with-your-meeting-link" },
     ])
     .run();
 

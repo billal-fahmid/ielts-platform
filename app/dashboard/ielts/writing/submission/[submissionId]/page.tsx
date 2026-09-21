@@ -4,6 +4,9 @@ import { getSubmission, getEvaluation, getPrompt } from "@/lib/services/writing"
 import { getProfile } from "@/lib/services/users";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
+import { checkFeature } from "@/lib/plans/gate";
+import { reviewForSubmission } from "@/lib/services/writing-reviews";
+import { TeacherReviewPanel } from "@/components/reviews/teacher-review-panel";
 import { RetryFeedback } from "@/components/ielts/retry-feedback";
 import { BandSummaryCard, CriteriaGrid } from "@/components/ielts/feedback-cards";
 import { taskCriterionLabel, WRITING_CATEGORY_LABELS } from "@/lib/ielts/writing";
@@ -24,6 +27,9 @@ export default async function WritingResultPage({ params }: { params: Promise<{ 
   const prompt = submission.promptId ? getPrompt(submission.promptId) : undefined;
   const target = getProfile(userId)?.ieltsTarget ?? null;
   const taskLabel = submission.taskType === "TASK1" ? "Task 1" : "Task 2";
+  const gate = checkFeature(userId, "TEACHER_FEEDBACK");
+  const review = reviewForSubmission(userId, submissionId);
+  const teacherPanel = <TeacherReviewPanel submissionId={submissionId} taskType={submission.taskType} review={review} allowed={gate.allowed} requiredPlanName={gate.requiredPlanName} />;
 
   const essay = (
     <details className="rounded-xl border border-border bg-surface p-5">
@@ -72,6 +78,7 @@ export default async function WritingResultPage({ params }: { params: Promise<{ 
             </div>
           </div>
         </Card>
+        {teacherPanel}
         {essay}
         {actions}
       </div>
@@ -102,6 +109,8 @@ export default async function WritingResultPage({ params }: { params: Promise<{ 
           {submission.wordCount} words · {submission.timeSpentSeconds < 60 ? "under 1 min" : `${Math.floor(submission.timeSpentSeconds / 60)} min`}
         </p>
       </div>
+
+      {teacherPanel}
 
       <BandSummaryCard band={evaluation.estimatedBand} low={low} high={high} target={target} />
 

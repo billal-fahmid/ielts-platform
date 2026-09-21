@@ -169,6 +169,28 @@ Payments never complete on the student's say-so. A plan starts only when an admi
 - Buying a lower plan than the one you have is blocked; paying for the same plan adds days; a higher plan replaces the current one straight away.
 - Environment variables are read on the server only and are never sent to the browser.
 
+## Teacher area (Milestone 3)
+
+Teachers have their own console at `/teacher` (administrators are sent to `/admin` instead, and teachers who open `/admin` are sent to `/teacher`).
+
+- **Own content only:** a teacher creates courses, modules, lessons, lesson quizzes and quiz questions, and can only see or change those in **their own courses** (`lib/services/teacher-content.ts`, API under `/api/teacher/*`). The generic `/api/admin/*` routes refuse teachers for this content, so it can't be used to reach another teacher's work. Teachers can't set which plan a course needs (it starts at Basic; an admin can change it), and lesson XP is capped at 100.
+- **Shared library:** IELTS questions, reading passages, listening tests and sections, writing and speaking prompts, mock tests, vocabulary and grammar topics belong to the platform, so any teacher can add to them (as before). Uploads (video, audio, images, PDFs) work from every content form.
+- **Batches:** a teacher makes batches (name, optional course, capacity, dates) and adds existing student accounts by email; the student is notified. Adding by email is rate-limited because it reveals whether an address is a student account.
+- **Students:** a teacher's students are the members of their batches plus the students enrolled in their courses. They see those students' course progress, quiz results and assignment grades, and nobody else's (other ids give a 404).
+- **Assignments:** for a batch or for everyone enrolled in a course, with instructions, an optional attachment, a due date (whole days in Dhaka time) and a maximum score. Publishing notifies the audience once. Students hand in text and an optional link (students can't upload files) and can edit until it is graded. The teacher scores and comments; the student is notified (with an email copy). Once work is submitted, the audience and maximum score are locked.
+- **Analytics:** course enrolment, completion and quiz averages, assignment submission rates and average scores, and how many students studied recently. Scores here are the teacher's own grades; IELTS bands elsewhere on the platform are estimates.
+- Teacher earnings or revenue share are not built: there is no teacher payout model yet. Writing and speaking review (with AI feedback beside the teacher's) and live classes are the next phases and will appear in this console.
+
+## Human writing and speaking review (Milestone 3)
+
+Both features are on the **Pro** plan (`TEACHER_FEEDBACK` and `ONE_ON_ONE`, editable in Admin → Plans). The seeded demo student is on Pro so they can be tried. Everything a teacher scores is labelled as the teacher's own estimate, never an official IELTS result.
+
+- **Writing review:** on a submitted essay's result page a Pro student can ask a teacher to review it (with an optional note; at most 3 open requests at a time, one live review per essay). Requests wait in a shared queue at `/teacher/reviews`. A teacher picks one up (only one teacher can win a request), reads the question and essay beside the AI feedback, and writes a band estimate, feedback on task response, coherence, vocabulary and grammar, and overall comments. Teachers see the essay text only after picking a request up. They can put an unfinished review back in the queue (their draft is discarded). The student sees the teacher's feedback above the AI feedback on the same page, gets a notification and an email, and can withdraw a request nobody has picked up. A finished review can be corrected by the same teacher.
+- **1-on-1 speaking:** teachers publish time slots at `/teacher/sessions` (typed in Bangladesh time; 15, 20, 30 or 45 minutes; a meeting link is required; a teacher's slots can't overlap). Pro students book an open slot at `/dashboard/speaking-sessions` (at least 2 hours ahead, at most 2 upcoming sessions, no overlapping bookings). Booking is atomic, so two students clicking the same slot can't both get it. A student can cancel up to 2 hours before the start (the slot reopens); a teacher can cancel any open or booked session (the student is told, with the reason). The teacher can start a session from 10 minutes before it begins, keeps private notes, scores fluency, lexical resource, grammar and pronunciation plus an overall band (a suggested average is offered, rounded the IELTS way), and writes feedback for the student. A teacher can mark a no-show 10 minutes after the start. Students never see the private notes, and only the booking student sees the meeting link.
+- **Live video is not built in:** a session is a meeting link (Zoom, Meet...). There is no reminder yet; session reminders arrive with live classes.
+- A teacher's students now also include students whose writing they reviewed or whom they taught in a session.
+- Cancelled requests and sessions stay Pro-only to create, but any student can cancel their own, even after their plan lapses, and can always read past feedback.
+
 ## Scripts
 
 - `npm run dev` — start the dev server

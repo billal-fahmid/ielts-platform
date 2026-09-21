@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { listResource, createResource, resources, ResourceError } from "@/lib/admin/resources";
 import { requireRole } from "@/lib/security/guards";
-import { ADMIN_ONLY_RESOURCES } from "@/lib/admin/access";
+import { ADMIN_ONLY_RESOURCES, TEACHER_OWNED_RESOURCES } from "@/lib/admin/access";
 import { audit } from "@/lib/security/audit";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { logError } from "@/lib/security/error-log";
 
 async function guard(resource: string) {
-  return ADMIN_ONLY_RESOURCES.has(resource) ? requireRole("ADMIN") : requireRole("ADMIN", "TEACHER");
+  return ADMIN_ONLY_RESOURCES.has(resource) || TEACHER_OWNED_RESOURCES.has(resource) ? requireRole("ADMIN") : requireRole("ADMIN", "TEACHER");
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ resource: string }> }) {
