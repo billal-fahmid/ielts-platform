@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { users, courses, lessons, vocabulary, quizAttempts, badges as badgesTable } from "@/lib/db/schema";
 import { Card } from "@/components/ui/card";
-import { Users, BookOpen, Layers, Sparkles, ClipboardList, Award } from "lucide-react";
+import { Users, BookOpen, Layers, Sparkles, ClipboardList, Award, BarChart3 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminOverviewPage() {
@@ -13,6 +13,7 @@ export default function AdminOverviewPage() {
   const badgeCount = db.select().from(badgesTable).all().length;
 
   const stats = [
+    { icon: BarChart3, label: "Analytics", value: "Charts and trends", href: "/admin/analytics" },
     { icon: Users, label: "Users", value: userCount, href: "/admin/users" },
     { icon: BookOpen, label: "Courses", value: courseCount, href: "/admin/courses" },
     { icon: Layers, label: "Lessons", value: lessonCount, href: "/admin/lessons" },

@@ -1,8 +1,10 @@
 # BanglaEnglish — English Learning & IELTS Preparation Platform
 
-Milestone 1 of a production-ready English learning and IELTS preparation
-platform for students in Bangladesh, built with Next.js App Router,
-TypeScript, and Tailwind CSS.
+An English learning and IELTS preparation platform for students in Bangladesh,
+built with Next.js App Router, TypeScript and Tailwind CSS: courses, IELTS
+practice and mock tests, AI feedback, human teacher review, live classes,
+community, payments in taka, and an admin console. To put it on a server, read
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Tech stack
 
@@ -107,16 +109,14 @@ lib/
 - Light/dark mode, responsive mobile-first layout, loading/empty states,
   toasts, and form validation throughout
 
-## Not yet built (left for Milestone 2/3, per the brief)
+## Not built yet
 
-- The AI conversation partner (explicitly called out in the brief as a
-  Milestone 2 feature — there's a teaser section for it on the homepage)
-- Google OAuth login (the spec said "if practical" — Credentials-based
-  auth is fully wired; adding a Google provider later is a small addition
-  in `lib/auth.ts`)
-- Real audio/video files (lessons have clearly marked placeholders, per
-  the spec's "video placeholder" / "audio placeholder" requirement)
-- Password reset by email (the email layer below is ready for it)
+- Password reset and email verification (the email layer is ready for them). Google sign-in exists but needs your Google keys (see DEPLOYMENT.md).
+- Built-in video: live classes and 1-on-1 sessions use a meeting link (Jitsi or any other).
+- Teacher earnings and payouts.
+- Object storage for uploads (local disk today; add an S3/R2 `StorageProvider`).
+- A nonce-based script Content-Security-Policy (a conservative policy is in place).
+- Shared rate limits and cache across several servers (both are in memory, per process).
 
 ## AI features and providers
 
@@ -191,10 +191,61 @@ Both features are on the **Pro** plan (`TEACHER_FEEDBACK` and `ONE_ON_ONE`, edit
 - A teacher's students now also include students whose writing they reviewed or whom they taught in a session.
 - Cancelled requests and sessions stay Pro-only to create, but any student can cancel their own, even after their plan lapses, and can always read past feedback.
 
+## Live classes (Milestone 3)
+
+- Teachers schedule classes at `/teacher/classes` for a batch or for everyone enrolled in a course (times typed in Bangladesh time, 15 minutes to 4 hours). A teacher can't double-book themselves. Students see their classes at `/dashboard/classes` (Pro plan feature `LIVE_CLASSES`).
+- **Meetings** go through a `MeetingProvider` interface (`lib/meetings/provider.ts`): `MANUAL` (paste a Zoom/Meet link) or `JITSI` (a room is made from the class id on `JITSI_BASE_URL`, default meet.jit.si). Add another provider by implementing the interface.
+- **Joining** opens 10 minutes before the start until 30 minutes after the end; joining more than 10 minutes late is recorded as LATE. The link is only sent to the audience, inside that window. Teachers mark attendance afterwards, add materials (links or uploads) and a recording link.
+- **Reminders** (24 hours and 1 hour before) are claimed atomically so each is sent once. They go out when people use the site, and on time if you call the cron endpoint (see DEPLOYMENT.md, "Scheduled jobs").
+
+## Community and speaking rooms (Milestone 3)
+
+- **Community** at `/dashboard/community`: posts and questions in the categories English, IELTS, Speaking, Writing, Study Abroad and Career (editable in Admin → Community categories), with tags, comments, likes, accepted answers, search and sorting. Teachers show a "Verified teacher" badge, administrators "Moderator". Names appear as "First L." Content is shown as text only, so markup can't run.
+- **Moderation:** any member can report a post or comment; three different reporters hide it automatically until an admin reviews it at `/admin/community` (hide, restore, dismiss, delete), pin posts, or ban a member from posting. Posts that look like spam (repeated links, shouting) are refused.
+- **Speaking rooms** at `/dashboard/rooms`: scheduled practice sessions of type Beginner, Intermediate, Advanced, IELTS Speaking, Debate or Job Interview, with a capacity. Joining is atomic (two students can't take the last seat), the meeting link is shown only to members inside the time window, and if the host leaves the room is cancelled and members are told.
+
+## Referrals, challenges, leaderboards and certificates (Milestone 3)
+
+- **Referrals** (`/dashboard/referrals`): each student has a private link (`/r/<code>`). A click is remembered in a cookie; when the friend registers and **later completes their first paid plan** the referrer gets 7 free days (up to 12 rewards). No reward for staff accounts, free coupons or self-referrals. Admins see the funnel at `/admin/referrals`.
+- **Challenges** (`/dashboard/challenges`): daily and weekly goals worked out from real activity (lessons, quizzes, words, practice, essays, speaking), with points awarded once each. **Leaderboards** are private by default: names show as "Anonymous learner" until the student chooses to show their name or hide themselves.
+- **Certificates** (`/dashboard/certificates`): issued automatically when a course is completed, with a long unguessable code. Anyone can check one at `/verify/<code>` (not indexed by search engines, rate limited). Admins can revoke or restore a certificate at `/admin/certificates`; a revoked certificate says so on the public page.
+
+## Study abroad, resources and search (Milestone 3)
+
+- **Study abroad** (`/study-abroad`): Canada, Australia, the UK, the USA, Ireland, Germany and New Zealand, each with universities, IELTS and general English requirements, application checklist, scholarships, visa links, costs and intakes. **This is general guidance, not legal or immigration advice**; every figure and link is editable in **Admin → Study countries**, and you should review them before launch.
+- **Resources** (`/resources`): guides, links and videos, free or premium (locked ones hide their address). **Blog** posts can be drafted and published from the admin.
+- **Search** (`/search`): courses, lessons, vocabulary, IELTS questions, blog posts and community posts, with type filters and Bangla-aware matching. Answers and explanations are never searched, so search can't be used to look up answers.
+
+## Admin analytics (Milestone 3)
+
+`/admin/analytics` (administrators only): total, active, new and premium students, enrolments, net revenue (payments minus refunds, in taka), mock tests, AI sessions, writing submissions, AI speaking sessions and teacher activity, each compared with the previous period (7, 30 or 90 days, Bangladesh time). Charts show daily and monthly users, revenue, enrolments, popular courses and learning activity; every chart has a "View as a table" version, and CSV exports are available (formula-safe, audited). Figures are cached for a minute. "Active" means the student did something that day.
+
+## SEO and speed (Milestone 3)
+
+- **Search engines:** `/sitemap.xml` (published courses, blog posts and countries, generated from the database) and `/robots.txt` (private areas, APIs and share links are excluded); page titles, descriptions, canonical addresses and Open Graph/Twitter tags on public pages; structured data (Organization and WebSite on the home page, Course, BlogPosting with breadcrumbs, and Article for country guides); clean readable URLs (`/courses/<slug>`, `/blog/<slug>`, `/study-abroad/<country>`). Login, search and certificate-check pages are not indexed. Set `APP_URL` to your real domain so these use it. There is no preview image yet, so shared links show text only.
+- **Honest numbers:** the home page shows real counts (students, courses, lessons, teachers), not invented statistics. Contact details on `/contact` come from `SUPPORT_EMAIL`, `SUPPORT_PHONE` and `SUPPORT_ADDRESS`; anything you leave blank is hidden.
+- **Speed:** pages render on the server; database indexes on every frequently filtered column; the blog is paginated; images below the fold load lazily; audio and practice media are cacheable; responses are compressed; the analytics and public statistics are cached briefly.
+
+## Testing
+
+There is no committed test suite yet. Behaviour was verified in each phase with throw-away scripts that ran the real services against a fresh seed and drove the site in a browser (desktop and 390 px phone width). The scenarios, if you want to repeat them by hand or turn them into a suite:
+
+1. Register, log in, onboarding; role redirects and blocked pages for each role.
+2. Enrol, complete lessons, take quizzes; certificate issue and public verification.
+3. IELTS listening, reading, writing, speaking and a full mock test; AI tutor and feedback (or the "unavailable" message).
+4. Plans and feature locks; subscription end and reminders.
+5. Manual payment: report, approve, reject, refund; coupons (limits, per-student, plan and course rules); the signed webhook (bad signature, replay, wrong amount).
+6. Referral click, registration, first purchase reward; challenges and leaderboard privacy.
+7. Teacher: own content only, batches, assignments, review queue, 1-on-1 slots, classes and attendance.
+8. Community post, comment, report, auto-hide, ban; rooms (capacity, host leaving).
+9. Search and study-abroad content; analytics numbers and CSV exports.
+10. Every API route called anonymously and as the wrong role.
+
 ## Scripts
 
 - `npm run dev` — start the dev server
 - `npm run build` / `npm start` — production build & serve
 - `npm run db:push` — apply the Drizzle schema to `data.db`
-- `npm run db:seed` — reset and repopulate demo data
+- `npm run db:seed` — reset and repopulate demo data (**erases everything**; refuses to run in production unless `ALLOW_PRODUCTION_SEED=yes`)
+- `npm run admin:create` — create the first administrator on a live install (`ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD`)
 - `npm run db:studio` — open Drizzle Studio to browse the database

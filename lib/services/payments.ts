@@ -11,6 +11,7 @@ import { listPrice, periodDays } from "@/lib/payments/pricing";
 import { normalizeTransactionId, normalizeWalletNumber } from "@/lib/payments/validation";
 import { METHOD_LABELS, isManualMethod, type BillingPeriod, type ManualMethod, type PaymentEvent, type PaymentMethod, type PaymentStatus } from "@/lib/payments/types";
 import { formatTaka } from "@/lib/plans/features";
+import { onPurchaseCompleted } from "@/lib/services/referrals";
 
 export type Transaction = typeof transactions.$inferSelect;
 
@@ -143,6 +144,12 @@ export function completeTransaction(transactionId: string, opts: { actorId?: str
     db.update(transactions).set({ subscriptionId: sub.id }).where(eq(transactions.id, tx.id)).run();
 
     notify(tx.userId, { type: "PAYMENT", title: `Payment received: ${formatTaka(tx.amount)}`, body: `Thank you! Your ${plan.name} plan is active. Receipt ${receiptNumber(tx)}.`, url: `/dashboard/billing/payments/${tx.id}` });
+    // A friend's first paid purchase rewards whoever referred them. A problem here must never undo the payment.
+    try {
+      onPurchaseCompleted(tx.userId, { id: tx.id, amount: tx.amount });
+    } catch {
+      /* the reward can be reviewed later; the student's plan is already active */
+    }
     return getTransaction(tx.id)!;
   })();
 }

@@ -50,3 +50,6 @@ data.db-wal
 
 # uploaded course media (see lib/storage)
 /uploads/
+
+# keep the template of required settings in git (real values live in .env.local)
+!.env.example

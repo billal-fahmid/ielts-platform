@@ -202,7 +202,7 @@ export function MockWritingStage({
           </div>
           {task.imageUrl && (
             <div className="rounded-xl border border-border bg-surface p-3">
-              <img src={task.imageUrl} alt={task.visualDescription ?? "Task 1 visual"} className="w-full rounded-lg" />
+              <img loading="lazy" decoding="async" src={task.imageUrl} alt={task.visualDescription ?? "Task 1 visual"} className="w-full rounded-lg" />
             </div>
           )}
         </div>

@@ -122,7 +122,7 @@ export function WritingEditor({
         </div>
         {prompt.imageUrl && (
           <div className="rounded-xl border border-border bg-surface p-3">
-            <img src={prompt.imageUrl} alt={prompt.visualDescription ?? "Task 1 visual"} className="w-full rounded-lg" />
+            <img loading="lazy" decoding="async" src={prompt.imageUrl} alt={prompt.visualDescription ?? "Task 1 visual"} className="w-full rounded-lg" />
           </div>
         )}
       </div>

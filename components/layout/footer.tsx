@@ -17,7 +17,10 @@ const columns = [
     links: [
       { href: "/about", label: "About Us" },
       { href: "/teachers", label: "Teachers" },
-      { href: "/blog", label: "Blog & Resources" },
+      { href: "/blog", label: "Blog" },
+      { href: "/resources", label: "Resources" },
+      { href: "/study-abroad", label: "Study Abroad" },
+      { href: "/search", label: "Search" },
       { href: "/pricing", label: "Pricing" },
       { href: "/contact", label: "Contact" },
     ],

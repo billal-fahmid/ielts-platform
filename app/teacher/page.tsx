@@ -38,6 +38,7 @@ export default async function TeacherOverviewPage() {
         <Stat label="Live assignments" value={o.openAssignments} href="/teacher/assignments" testId="stat-assignments" />
         <Stat label="To grade" value={o.toGrade} hint={o.toGrade ? "Students are waiting" : "All caught up"} href="/teacher/assignments" testId="stat-to-grade" />
         <Stat label="Writing reviews" value={o.reviewsWaiting} hint={`waiting in the queue${o.reviewsInProgress ? ` · ${o.reviewsInProgress} yours in progress` : ""}`} href="/teacher/reviews" testId="stat-reviews" />
+        <Stat label="Live classes" value={o.upcomingClasses} hint="scheduled and upcoming" href="/teacher/classes" testId="stat-classes" />
         <Stat label="Speaking sessions" value={o.upcomingSessions} hint="booked and upcoming" href="/teacher/sessions" testId="stat-sessions" />
       </div>
 
@@ -63,7 +64,6 @@ export default async function TeacherOverviewPage() {
         )}
       </Card>
 
-      <p className="text-xs text-ink-soft">Live classes arrive in a later update and will appear here.</p>
     </div>
   );
 }

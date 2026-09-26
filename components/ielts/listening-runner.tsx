@@ -182,7 +182,7 @@ export function ListeningRunner({
           <AudioPlayer key={section.id} src={section.audioUrl} />
           {mapImage && (
             <div className="rounded-xl border border-border bg-surface p-3">
-              <img src={mapImage} alt="Map for this section" className="w-full rounded-lg" />
+              <img loading="lazy" decoding="async" src={mapImage} alt="Map for this section" className="w-full rounded-lg" />
             </div>
           )}
         </div>

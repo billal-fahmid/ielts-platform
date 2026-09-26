@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { Metadata } from "next";
 import Link from "next/link";
 import { PenLine, Mic, Headphones, BookOpen, ArrowRight, Target } from "lucide-react";
@@ -7,7 +8,7 @@ import { LinkButton } from "@/components/ui/button";
 import { BandDial } from "@/components/marketing/band-dial";
 import { listCourses } from "@/lib/services/courses";
 
-export const metadata: Metadata = { title: "IELTS Preparation — BanglaEnglish" };
+export const metadata: Metadata = pageMetadata({ title: "IELTS Preparation — BanglaEnglish", description: "IELTS Listening, Reading, Writing and Speaking practice, full mock tests and AI feedback, with estimated band scores.", path: "/ielts-preparation" });
 
 export default function IeltsPreparationPage() {
   const courses = listCourses("IELTS");

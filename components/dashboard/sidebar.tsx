@@ -22,17 +22,31 @@ import {
   ClipboardList,
   MessageSquareText,
   Video,
+  MonitorPlay,
+  MessagesSquare,
+  Users,
+  Trophy,
+  Gift,
+  Award,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, mobileNav: true },
   { href: "/dashboard/ielts", label: "IELTS Prep", icon: Target, mobileNav: true },
+  { href: "/search", label: "Search", icon: Search, mobileNav: false },
   { href: "/dashboard/practice", label: "Practice", icon: Dumbbell, mobileNav: false },
   { href: "/dashboard/tutor", label: "AI Tutor", icon: Bot, mobileNav: false },
   { href: "/dashboard/assessment", label: "Assessment", icon: ClipboardCheck, mobileNav: false },
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen, mobileNav: true },
   { href: "/dashboard/assignments", label: "Assignments", icon: ClipboardList, mobileNav: false },
+  { href: "/dashboard/challenges", label: "Challenges", icon: Trophy, mobileNav: false },
+  { href: "/dashboard/certificates", label: "Certificates", icon: Award, mobileNav: false },
+  { href: "/dashboard/referrals", label: "Refer a friend", icon: Gift, mobileNav: false },
+  { href: "/dashboard/community", label: "Community", icon: MessagesSquare, mobileNav: false },
+  { href: "/dashboard/rooms", label: "Speaking rooms", icon: Users, mobileNav: false },
+  { href: "/dashboard/classes", label: "Live classes", icon: MonitorPlay, mobileNav: false },
   { href: "/dashboard/reviews", label: "Teacher feedback", icon: MessageSquareText, mobileNav: false },
   { href: "/dashboard/speaking-sessions", label: "1-on-1 speaking", icon: Video, mobileNav: false },
   { href: "/dashboard/grammar", label: "Grammar Lab", icon: Layers, mobileNav: false },
@@ -50,7 +64,7 @@ const mobileLinks = [
   { href: "/dashboard/courses", label: "Learn", icon: BookOpen, match: (p: string) => p.startsWith("/dashboard/courses") || p.startsWith("/dashboard/grammar") },
   { href: "/dashboard/ielts", label: "IELTS", icon: Target, match: (p: string) => p.startsWith("/dashboard/ielts") },
   { href: "/dashboard/practice", label: "Practice", icon: Dumbbell, match: (p: string) => ["/dashboard/practice", "/dashboard/tutor", "/dashboard/vocabulary", "/dashboard/flashcards"].some((x) => p.startsWith(x)) },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, match: (p: string) => p === "/dashboard" || ["/dashboard/progress", "/dashboard/profile", "/dashboard/notifications", "/dashboard/assessment", "/dashboard/assignments", "/dashboard/reviews", "/dashboard/speaking-sessions"].some((x) => p.startsWith(x)) },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, match: (p: string) => p === "/dashboard" || ["/dashboard/progress", "/dashboard/profile", "/dashboard/notifications", "/dashboard/assessment", "/dashboard/assignments", "/dashboard/reviews", "/dashboard/speaking-sessions", "/dashboard/classes", "/dashboard/community", "/dashboard/rooms", "/dashboard/challenges", "/dashboard/certificates", "/dashboard/referrals"].some((x) => p.startsWith(x)) },
 ];
 
 export function DashboardSidebar({ lockedPrefixes = [] }: { lockedPrefixes?: string[] }) {

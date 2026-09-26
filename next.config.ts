@@ -18,8 +18,13 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3", "nodemailer"],
   allowedDevOrigins: ["10.0.30.133"],
   poweredByHeader: false,
+  compress: true,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Practice audio and images rarely change, so browsers and CDNs may keep them (helps slow mobile connections).
+      { source: "/:dir(audio|listening)/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }] },
+    ];
   },
 };
 

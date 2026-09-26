@@ -123,7 +123,7 @@ export function QuestionRenderer({
       const imageUrl = question.content.imageUrl as string | undefined;
       return (
         <div className="flex flex-col gap-3">
-          {imageUrl && !hideImage && <img src={imageUrl} alt="Map" className="rounded-lg border border-border" />}
+          {imageUrl && !hideImage && <img loading="lazy" decoding="async" src={imageUrl} alt="Map" className="rounded-lg border border-border" />}
           <div className="flex flex-wrap gap-2">
             {labels.map((label) => (
               <button

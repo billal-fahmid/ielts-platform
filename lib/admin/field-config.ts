@@ -142,6 +142,94 @@ export const resourceMeta: Record<string, ResourceMeta> = {
     ],
   },
 
+  // ---------- Website content (administrators only) ----------
+  blogPosts: {
+    label: "Blog posts",
+    listColumns: ["title", "category", "published"],
+    fields: [
+      { key: "title", label: "Title", type: "text", required: true },
+      { key: "excerpt", label: "Short summary", type: "textarea", required: true, hint: "Shown on the blog list and in search." },
+      { key: "content", label: "Article", type: "textarea", required: true, rows: 12, hint: "Blank lines start a new paragraph." },
+      { key: "category", label: "Category", type: "text", required: true },
+      { key: "tags", label: "Tags (one per line)", type: "json-list" },
+      { key: "author", label: "Author name", type: "text" },
+      { key: "image", label: "Image path", type: "text", upload: { kinds: ["IMAGE"], visibility: "PUBLIC" } },
+      { key: "published", label: "Published", type: "checkbox", hint: "Untick to keep it as a draft nobody else can see." },
+    ],
+  },
+  studyCountries: {
+    label: "Study abroad countries",
+    listColumns: ["name", "ieltsRequirement", "order", "published"],
+    fields: [
+      { key: "name", label: "Country", type: "text", required: true },
+      { key: "flag", label: "Flag emoji", type: "text" },
+      { key: "summary", label: "Summary", type: "textarea", required: true, rows: 4 },
+      { key: "tuitionRange", label: "Tuition (approximate)", type: "text", hint: "For example: CAD 20,000–35,000 a year" },
+      { key: "livingCost", label: "Living costs (approximate)", type: "text" },
+      { key: "ieltsRequirement", label: "Typical IELTS requirement", type: "text", hint: "In words, for example: 6.5 overall, no band below 6.0" },
+      { key: "ieltsMin", label: "Usual minimum overall band", type: "number", nullable: true },
+      { key: "englishRequirements", label: "General English requirements", type: "textarea", rows: 4, hint: "Other accepted tests, language of study, waivers." },
+      { key: "universities", label: "Example universities (one per line)", type: "json-list", hint: "Examples only, not a ranking." },
+      { key: "applicationChecklist", label: "Application checklist (one step per line, in order)", type: "json-list" },
+      { key: "visaInfo", label: "Student visa", type: "textarea", rows: 4 },
+      { key: "visaResources", label: "Official visa links (one per line)", type: "json-list", hint: "Write each as: Label | https://address" },
+      { key: "workRights", label: "Working while studying and after", type: "textarea", rows: 4 },
+      { key: "intakes", label: "Intakes (one per line)", type: "json-list" },
+      { key: "popularCities", label: "Popular cities (one per line)", type: "json-list" },
+      { key: "scholarships", label: "Scholarships (one per line)", type: "json-list" },
+      { key: "image", label: "Image path", type: "text", upload: { kinds: ["IMAGE"], visibility: "PUBLIC" } },
+      { key: "order", label: "Order", type: "number" },
+      { key: "published", label: "Published", type: "checkbox" },
+    ],
+  },
+  learningResources: {
+    label: "Resources",
+    listColumns: ["title", "kind", "category", "requiredPlan", "published"],
+    fields: [
+      { key: "title", label: "Title", type: "text", required: true },
+      { key: "description", label: "Description", type: "textarea", required: true },
+      { key: "kind", label: "Type", type: "select", options: ["PDF", "LINK", "VIDEO", "AUDIO"], required: true },
+      { key: "url", label: "File or link", type: "text", required: true, upload: { kinds: ["DOCUMENT", "AUDIO", "VIDEO"] }, hint: "Upload a file, or paste a full https:// link or a page on this site (starting with /)." },
+      { key: "category", label: "Category", type: "text", required: true, hint: "Resources are grouped by this, e.g. IELTS Writing." },
+      { key: "requiredPlan", label: "Cheapest plan that includes it", type: "select", options: [...PLAN_CODES], required: true, hint: "Free resources are open to everyone. Others show a lock to people on a lower plan." },
+      { key: "order", label: "Order", type: "number" },
+      { key: "published", label: "Published", type: "checkbox" },
+    ],
+  },
+  testimonials: {
+    label: "Testimonials",
+    listColumns: ["name", "role", "rating"],
+    fields: [
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "role", label: "Achievement or role", type: "text", required: true, hint: "For example: IELTS Band 7.5 · Study in UK" },
+      { key: "quote", label: "Quote", type: "textarea", required: true },
+      { key: "rating", label: "Rating (1-5)", type: "number" },
+      { key: "image", label: "Photo path", type: "text", upload: { kinds: ["IMAGE"], visibility: "PUBLIC" } },
+    ],
+  },
+  teachers: {
+    label: "Team profiles",
+    listColumns: ["name", "title"],
+    fields: [
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "title", label: "Title", type: "text", required: true },
+      { key: "bio", label: "Bio", type: "textarea", required: true },
+      { key: "specialties", label: "Specialties (one per line)", type: "json-list" },
+      { key: "image", label: "Photo path", type: "text", upload: { kinds: ["IMAGE"], visibility: "PUBLIC" } },
+    ],
+  },
+
+  communityCategories: {
+    label: "Community categories",
+    listColumns: ["name", "order", "active"],
+    fields: [
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "description", label: "Short description", type: "text" },
+      { key: "order", label: "Order", type: "number" },
+      { key: "active", label: "Active", type: "checkbox", hint: "Untick to stop new posts using it. Existing posts stay." },
+    ],
+  },
+
   // ---------- IELTS content (questions have their own page: /admin/ielts-questions) ----------
   readingPassages: {
     label: "Reading Passages",

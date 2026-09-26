@@ -50,8 +50,8 @@ export function RegisterForm() {
     }
 
     push("Account created! Let's set up your profile.", "success");
-    router.push("/onboarding");
-    router.refresh();
+    // A full page load so the new session is used (the router may hold a stale prefetched redirect).
+    window.location.assign("/onboarding");
   };
 
   return (

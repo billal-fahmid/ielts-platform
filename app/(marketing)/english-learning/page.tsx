@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen, Sparkles, PenLine, Headphones, Mic, ArrowRight } from "lucide-react";
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { listCourses } from "@/lib/services/courses";
 
-export const metadata: Metadata = { title: "English Learning — BanglaEnglish" };
+export const metadata: Metadata = pageMetadata({ title: "English Learning — BanglaEnglish", description: "Grammar, vocabulary, speaking and career English courses for learners in Bangladesh, from beginner to advanced.", path: "/english-learning" });
 
 export default function EnglishLearningPage() {
   const courses = listCourses("ENGLISH");

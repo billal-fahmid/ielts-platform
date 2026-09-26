@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, UsersRound, ClipboardList, BarChart3, BookOpen, Shapes, Layers, FileQuestion, HelpCircle, Target, BookOpenCheck, Headphones, AudioLines, PenLine, Mic, ClipboardCheck, Sparkles, MessageSquareText, CalendarClock, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, UsersRound, ClipboardList, BarChart3, BookOpen, Shapes, Layers, FileQuestion, HelpCircle, Target, BookOpenCheck, Headphones, AudioLines, PenLine, Mic, ClipboardCheck, Sparkles, MessageSquareText, CalendarClock, MonitorPlay, MessagesSquare, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const links: NavItem[] = [
   { href: "/teacher/students", label: "Students", icon: Users },
   { href: "/teacher/batches", label: "Batches", icon: UsersRound },
   { href: "/teacher/assignments", label: "Assignments", icon: ClipboardList },
+  { href: "/teacher/classes", label: "Live classes", icon: MonitorPlay },
   { href: "/teacher/reviews", label: "Writing reviews", icon: MessageSquareText },
   { href: "/teacher/sessions", label: "Speaking sessions", icon: CalendarClock },
   { href: "/teacher/analytics", label: "Analytics", icon: BarChart3 },
@@ -30,6 +31,9 @@ const links: NavItem[] = [
   { href: "/teacher/content/writingPrompts", label: "Writing prompts", icon: PenLine },
   { href: "/teacher/content/speakingPrompts", label: "Speaking prompts", icon: Mic },
   { href: "/teacher/content/mockTests", label: "Mock tests", icon: ClipboardCheck },
+  { section: "Community" },
+  { href: "/dashboard/community", label: "Community", icon: MessagesSquare },
+  { href: "/dashboard/rooms", label: "Speaking rooms", icon: Users },
   { section: "Shared library" },
   { href: "/teacher/content/vocabulary", label: "Vocabulary", icon: Sparkles },
   { href: "/teacher/content/grammarTopics", label: "Grammar topics", icon: HelpCircle },

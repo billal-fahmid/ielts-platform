@@ -30,7 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </header>
       <div className="flex flex-1">
         <AdminSidebar role={role} />
-        <main className="flex-1">
+        <main className="min-w-0 flex-1">
           <div className="container-page py-8">{children}</div>
         </main>
       </div>

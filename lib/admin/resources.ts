@@ -27,15 +27,23 @@ import {
   quizAttempts,
   batches,
   assignments,
+  blogPosts,
+  studyCountries,
+  learningResources,
+  testimonials,
+  teachers,
+  communityCategories,
+  communityPosts,
 } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { id as newId, slugify } from "@/lib/utils";
 import { resourceMeta, type FieldConfig } from "@/lib/admin/field-config";
-import { PLAN_FEATURES } from "@/lib/plans/features";
+import { PLAN_FEATURES, PLAN_CODES } from "@/lib/plans/features";
 import { normalizeWalletNumber } from "@/lib/payments/validation";
 import { normalizeCouponCode } from "@/lib/payments/pricing";
 import { mockTestProblems } from "@/lib/services/mock-test";
 import { TASK1_CATEGORIES, TASK2_CATEGORIES, countWords } from "@/lib/ielts/writing";
+import { parseLinkLines } from "@/lib/content/rules";
 
 const tables: Record<string, any> = {
   courses,
@@ -56,9 +64,15 @@ const tables: Record<string, any> = {
   plans,
   coupons,
   paymentAccounts,
+  blogPosts,
+  studyCountries,
+  learningResources,
+  testimonials,
+  teachers,
+  communityCategories,
 };
 
-const needsSlug = new Set(["courses", "modules", "lessons", "grammarTopics"]);
+const needsSlug = new Set(["courses", "modules", "lessons", "grammarTopics", "blogPosts", "studyCountries", "communityCategories"]);
 
 export const resources = resourceMeta;
 
@@ -148,6 +162,47 @@ const hooks: Record<string, Hooks> = {
         if (!options.includes(m.correctAnswer)) throw new ResourceError("The correct answer must match one of the options exactly.");
       }
       if (m.type === "TRUE_FALSE" && !["True", "False"].includes(m.correctAnswer)) throw new ResourceError("For true/false questions the correct answer must be True or False.");
+    },
+  },
+
+  blogPosts: {
+    validate: (m) => {
+      if (String(m.title ?? "").trim().length < 5) throw new ResourceError("The title needs at least 5 characters.");
+      if (m.published && String(m.content ?? "").trim().length < 50) throw new ResourceError("A published article needs at least 50 characters of text. Untick Published to save a draft.");
+      if (m.image && !isSafeUrl(String(m.image))) throw new ResourceError("The image must be a path starting with “/” or a full http(s) URL.");
+    },
+  },
+
+  studyCountries: {
+    validate: (m) => {
+      const { invalid } = parseLinkLines(m.visaResources);
+      if (invalid.length) throw new ResourceError(`Visa links must look like “Label | https://address”. Fix: ${invalid[0].slice(0, 60)}`);
+      if (m.ieltsMin != null && (typeof m.ieltsMin !== "number" || m.ieltsMin < 0 || m.ieltsMin > 9 || !Number.isInteger(m.ieltsMin * 2))) throw new ResourceError("The minimum band must be from 0 to 9 in half bands (for example 6.5).");
+      if (m.image && !isSafeUrl(String(m.image))) throw new ResourceError("The image must be a path starting with “/” or a full http(s) URL.");
+    },
+  },
+
+  learningResources: {
+    validate: (m) => {
+      if (!isSafeUrl(String(m.url ?? ""))) throw new ResourceError("The file or link must be an uploaded file, a page on this site starting with “/”, or a full http(s) address.");
+      if (!(PLAN_CODES as readonly string[]).includes(m.requiredPlan)) throw new ResourceError("Choose a valid plan.");
+    },
+  },
+
+  communityCategories: {
+    validate: (m) => {
+      if (String(m.name ?? "").trim().length < 2) throw new ResourceError("Give the category a name.");
+    },
+    beforeDelete: (id) => {
+      const used = db.select().from(communityPosts).where(eq(communityPosts.categoryId, id)).all().length;
+      if (used > 0) throw new ResourceError(`${used} post${used === 1 ? "" : "s"} use this category, so it can't be deleted. Untick Active to stop new posts using it.`);
+    },
+  },
+
+  testimonials: {
+    validate: (m) => {
+      if (m.rating != null && (!Number.isInteger(m.rating) || m.rating < 1 || m.rating > 5)) throw new ResourceError("The rating must be a whole number from 1 to 5.");
+      if (m.image && !isSafeUrl(String(m.image))) throw new ResourceError("The photo must be a path starting with “/” or a full http(s) URL.");
     },
   },
 
@@ -466,8 +521,10 @@ export function createResource(key: string, data: Record<string, any>) {
   hook?.validate?.(changes, { existing: null, changes });
 
   const payload: any = { id: newId(), ...changes };
-  if (needsSlug.has(key) && payload.title) {
-    payload.slug = slugify(payload.title) + "-" + Math.random().toString(36).slice(2, 6);
+  // The address is made from the title (or, for countries, the name).
+  const slugSource = payload.title ?? payload.name;
+  if (needsSlug.has(key) && slugSource) {
+    payload.slug = slugify(String(slugSource)) + "-" + Math.random().toString(36).slice(2, 6);
   }
   db.insert(table).values(payload).run();
   return payload;

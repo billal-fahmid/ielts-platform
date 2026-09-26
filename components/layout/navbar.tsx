@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
-import { Menu, X, Moon, Sun, GraduationCap, ChevronDown, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { Menu, X, Moon, Sun, GraduationCap, ChevronDown, LayoutDashboard, LogOut, ShieldCheck, Search } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { LinkButton } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ const links = [
   { href: "/ielts-preparation", label: "IELTS Prep" },
   { href: "/courses", label: "Courses" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/study-abroad", label: "Study Abroad" },
   { href: "/teachers", label: "Teachers" },
   { href: "/blog", label: "Blog" },
 ];
@@ -37,13 +38,13 @@ export function Navbar() {
           Bangla<span className="text-primary">English</span>
         </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex">
-          {links.map((l) => (
+        <nav className="hidden items-center gap-4 xl:flex xl:gap-6">
+          {links.filter((l) => l.href !== "/").map((l) => (
             <Link
               key={l.href}
               href={l.href}
               className={cn(
-                "text-sm font-medium text-ink-soft transition-colors hover:text-ink",
+                "whitespace-nowrap text-sm font-medium text-ink-soft transition-colors hover:text-ink",
                 pathname === l.href && "text-primary"
               )}
             >
@@ -52,7 +53,10 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-3 xl:flex">
+          <Link href="/search" aria-label="Search" className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-ink-soft hover:text-ink">
+            <Search className="h-4 w-4" />
+          </Link>
           <button
             onClick={toggle}
             aria-label="Toggle dark mode"
@@ -114,7 +118,7 @@ export function Navbar() {
         </div>
 
         <button
-          className="flex h-9 w-9 items-center justify-center lg:hidden"
+          className="flex h-9 w-9 items-center justify-center xl:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -123,7 +127,7 @@ export function Navbar() {
       </div>
 
       {open && (
-        <div className="border-t border-border bg-bg px-5 pb-5 pt-2 lg:hidden">
+        <div className="border-t border-border bg-bg px-5 pb-5 pt-2 xl:hidden">
           <nav className="flex flex-col gap-1">
             {links.map((l) => (
               <Link

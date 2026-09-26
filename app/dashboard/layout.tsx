@@ -6,6 +6,7 @@ import { getProfile } from "@/lib/services/users";
 import { DashboardSidebar, MobileDashboardNav } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { unreadCount } from "@/lib/services/notifications";
+import { sendDueReminders } from "@/lib/services/live-classes";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -18,6 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/onboarding");
   }
 
+  sendDueReminders();
   const ent = getEntitlements(userId);
   const lockedPrefixes = FEATURE_ROUTES.filter((r) => !ent.features.has(r.feature)).map((r) => r.prefix);
 
@@ -26,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <DashboardTopbar profile={profile} userName={session.user.name || "Student"} unreadNotifications={unreadCount(userId)} role={(session.user as any).role} />
       <div className="flex flex-1">
         <DashboardSidebar lockedPrefixes={lockedPrefixes} />
-        <main className="flex-1 pb-20 lg:pb-0">
+        <main className="min-w-0 flex-1 pb-20 lg:pb-0">
           <div className="container-page py-8">{children}</div>
         </main>
       </div>

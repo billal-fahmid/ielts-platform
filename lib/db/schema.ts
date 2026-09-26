@@ -18,8 +18,14 @@ export const users = sqliteTable("users", {
     .notNull()
     .default("STUDENT"),
   image: text("image"),
+  // Google's stable account id, set when the person signs in with Google.
+  googleSub: text("google_sub").unique(),
+  // Set when the person proved they own the address (Google confirmed it). Password sign-ups start unverified.
+  emailVerifiedAt: text("email_verified_at"),
+  // Raised to sign out every session of this account at once (login tokens carry the number they were issued with).
+  sessionVersion: integer("session_version").notNull().default(0),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("users_role_idx").on(t.role), index("users_created_idx").on(t.createdAt)]);
 
 export const profiles = sqliteTable("profiles", {
   id: text("id").primaryKey(),
@@ -46,6 +52,8 @@ export const profiles = sqliteTable("profiles", {
   dailyGoalMinutes: integer("daily_goal_minutes").notNull().default(20),
   /** Whether important notifications are also sent by email. In-app notifications are always on. */
   emailNotifications: integer("email_notifications", { mode: "boolean" }).notNull().default(true),
+  /** How this student appears on leaderboards: as "Learner ab12" (default), as first name and initial, or not at all. */
+  leaderboardVisibility: text("leaderboard_visibility", { enum: ["ANONYMOUS", "NAME", "HIDDEN"] }).notNull().default("ANONYMOUS"),
 });
 
 // ---------- COURSES ----------
@@ -65,7 +73,7 @@ export const courses = sqliteTable("courses", {
   requiredPlan: text("required_plan").notNull().default("FREE"),
   /** The teacher who created and manages the course. Empty for platform-owned courses (admins manage those). */
   ownerId: text("owner_id"),
-});
+}, (t) => [index("courses_published_track_idx").on(t.published, t.track), index("courses_owner_idx").on(t.ownerId)]);
 
 export const modules = sqliteTable("modules", {
   id: text("id").primaryKey(),
@@ -73,7 +81,7 @@ export const modules = sqliteTable("modules", {
   slug: text("slug").notNull(),
   title: text("title").notNull(),
   order: integer("order").notNull().default(0),
-});
+}, (t) => [index("modules_course_idx").on(t.courseId, t.order)]);
 
 export const lessons = sqliteTable("lessons", {
   id: text("id").primaryKey(),
@@ -88,7 +96,7 @@ export const lessons = sqliteTable("lessons", {
   vocabularyIds: text("vocabulary_ids", { mode: "json" }).$type<string[]>().default([]),
   order: integer("order").notNull().default(0),
   xpReward: integer("xp_reward").notNull().default(10),
-});
+}, (t) => [index("lessons_module_idx").on(t.moduleId, t.order)]);
 
 // ---------- QUIZ ENGINE (reused for lessons, grammar, assessment) ----------
 export const quizzes = sqliteTable("quizzes", {
@@ -114,7 +122,7 @@ export const questions = sqliteTable("questions", {
     enum: ["GRAMMAR", "VOCABULARY", "READING", "LISTENING"],
   }),
   order: integer("order").notNull().default(0),
-});
+}, (t) => [index("questions_quiz_idx").on(t.quizId, t.order)]);
 
 export const quizAttempts = sqliteTable("quiz_attempts", {
   id: text("id").primaryKey(),
@@ -124,7 +132,7 @@ export const quizAttempts = sqliteTable("quiz_attempts", {
   totalQuestions: integer("total_questions").notNull(),
   answers: text("answers", { mode: "json" }).$type<Record<string, string>>().default({}),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("quiz_attempts_user_idx").on(t.userId, t.createdAt), index("quiz_attempts_quiz_idx").on(t.quizId)]);
 
 // ---------- GRAMMAR LAB ----------
 export const grammarTopics = sqliteTable("grammar_topics", {
@@ -160,7 +168,7 @@ export const userVocabulary = sqliteTable("user_vocabulary", {
   status: text("status", { enum: ["NEW", "LEARNED", "DIFFICULT"] }).notNull().default("NEW"),
   boxLevel: integer("box_level").notNull().default(1),
   lastReviewed: text("last_reviewed"),
-});
+}, (t) => [index("user_vocabulary_user_idx").on(t.userId, t.status)]);
 
 // ---------- PROGRESS / GAMIFICATION ----------
 export const progress = sqliteTable("progress", {
@@ -170,7 +178,7 @@ export const progress = sqliteTable("progress", {
   completed: integer("completed", { mode: "boolean" }).notNull().default(false),
   completedAt: text("completed_at"),
   lastPosition: integer("last_position").notNull().default(0),
-});
+}, (t) => [index("progress_user_idx").on(t.userId, t.completed), index("progress_lesson_idx").on(t.lessonId)]);
 
 export const badges = sqliteTable("badges", {
   id: text("id").primaryKey(),
@@ -185,7 +193,7 @@ export const userBadges = sqliteTable("user_badges", {
   userId: text("user_id").notNull(),
   badgeId: text("badge_id").notNull(),
   earnedAt: text("earned_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("user_badges_user_idx").on(t.userId)]);
 
 // ---------- ASSESSMENT ----------
 export const assessments = sqliteTable("assessments", {
@@ -205,7 +213,7 @@ export const assessmentResults = sqliteTable("assessment_results", {
   estimatedLevel: text("estimated_level").notNull(),
   weakAreas: text("weak_areas", { mode: "json" }).$type<string[]>().default([]),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("assessment_results_user_idx").on(t.userId, t.createdAt)]);
 
 // ---------- BOOKMARKS ----------
 export const bookmarks = sqliteTable("bookmarks", {
@@ -213,7 +221,7 @@ export const bookmarks = sqliteTable("bookmarks", {
   userId: text("user_id").notNull(),
   lessonId: text("lesson_id").notNull(),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("bookmarks_user_idx").on(t.userId)]);
 
 // ---------- MARKETING CONTENT ----------
 export const teachers = sqliteTable("teachers", {
@@ -242,8 +250,64 @@ export const blogPosts = sqliteTable("blog_posts", {
   content: text("content").notNull(),
   image: text("image"),
   category: text("category").notNull().default("General"),
+  /** Drafts (unticked) are hidden from the public blog and from search. */
+  published: integer("published", { mode: "boolean" }).notNull().default(true),
+  author: text("author"),
+  tags: text("tags", { mode: "json" }).$type<string[]>().default([]),
   publishedAt: text("published_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("blog_posts_published_idx").on(t.published, t.publishedAt)]);
+
+// ---------- STUDY ABROAD AND RESOURCES (content managed in the admin panel) ----------
+export const studyCountries = sqliteTable("study_countries", {
+  id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  /** An emoji flag shown beside the name. */
+  flag: text("flag"),
+  summary: text("summary").notNull(),
+  tuitionRange: text("tuition_range"),
+  livingCost: text("living_cost"),
+  /** The typical IELTS requirement in words (universities differ), e.g. "6.5 overall, no band below 6.0". */
+  ieltsRequirement: text("ielts_requirement"),
+  /** The usual minimum overall band, for comparing with a student's target. */
+  ieltsMin: real("ielts_min"),
+  /** General English requirements beyond IELTS: other accepted tests, language of study, waivers. */
+  englishRequirements: text("english_requirements"),
+  visaInfo: text("visa_info"),
+  workRights: text("work_rights"),
+  /** Example universities (not a ranking or a recommendation). */
+  universities: text("universities", { mode: "json" }).$type<string[]>().default([]),
+  /** Steps to apply, in order. */
+  applicationChecklist: text("application_checklist", { mode: "json" }).$type<string[]>().default([]),
+  /** Official visa pages, one per line as "Label | https://address". */
+  visaResources: text("visa_resources", { mode: "json" }).$type<string[]>().default([]),
+  intakes: text("intakes", { mode: "json" }).$type<string[]>().default([]),
+  popularCities: text("popular_cities", { mode: "json" }).$type<string[]>().default([]),
+  scholarships: text("scholarships", { mode: "json" }).$type<string[]>().default([]),
+  image: text("image"),
+  order: integer("order").notNull().default(0),
+  published: integer("published", { mode: "boolean" }).notNull().default(true),
+}, (t) => [index("study_countries_published_idx").on(t.published, t.order)]);
+
+/** Guides, worksheets, links and videos students can open. Items can require a plan. */
+export const learningResources = sqliteTable(
+  "learning_resources",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    kind: text("kind", { enum: ["PDF", "LINK", "VIDEO", "AUDIO"] }).notNull().default("PDF"),
+    /** An uploaded file (/api/files/...) or a full https:// link. Never sent to people whose plan doesn't include it. */
+    url: text("url").notNull(),
+    category: text("category").notNull().default("General"),
+    /** The cheapest plan that can open it (FREE, BASIC, PREMIUM or PRO). */
+    requiredPlan: text("required_plan").notNull().default("FREE"),
+    order: integer("order").notNull().default(0),
+    published: integer("published", { mode: "boolean" }).notNull().default(true),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("learning_resources_category_idx").on(t.category)]
+);
 
 // ---------- IELTS READING ----------
 export const readingPassages = sqliteTable("reading_passages", {
@@ -332,7 +396,7 @@ export const ieltsAttempts = sqliteTable("ielts_attempts", {
   mockAttemptId: text("mock_attempt_id"),
   startedAt: text("started_at").default(sql`(CURRENT_TIMESTAMP)`),
   completedAt: text("completed_at"),
-});
+}, (t) => [index("ielts_attempts_user_idx").on(t.userId, t.skill, t.status), index("ielts_attempts_mock_idx").on(t.mockAttemptId)]);
 
 // ---------- IELTS WRITING ----------
 export const writingPrompts = sqliteTable("writing_prompts", {
@@ -376,7 +440,7 @@ export const writingSubmissions = sqliteTable("writing_submissions", {
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
   submittedAt: text("submitted_at"),
-});
+}, (t) => [index("writing_submissions_user_idx").on(t.userId, t.status, t.createdAt)]);
 
 export const writingEvaluations = sqliteTable("writing_evaluations", {
   id: text("id").primaryKey(),
@@ -421,7 +485,7 @@ export const speakingSessions = sqliteTable("speaking_sessions", {
   totalDurationSeconds: integer("total_duration_seconds").notNull().default(0),
   startedAt: text("started_at").default(sql`(CURRENT_TIMESTAMP)`),
   completedAt: text("completed_at"),
-});
+}, (t) => [index("speaking_sessions_user_idx").on(t.userId, t.status)]);
 
 export const speakingTurns = sqliteTable("speaking_turns", {
   id: text("id").primaryKey(),
@@ -476,7 +540,7 @@ export const aiTutorConversations = sqliteTable("ai_tutor_conversations", {
   title: text("title").notNull().default("New conversation"),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("ai_tutor_conversations_user_idx").on(t.userId, t.updatedAt)]);
 
 export const aiTutorMessages = sqliteTable("ai_tutor_messages", {
   id: text("id").primaryKey(),
@@ -485,7 +549,7 @@ export const aiTutorMessages = sqliteTable("ai_tutor_messages", {
   content: text("content").notNull(),
   language: text("language", { enum: ["EN", "BN", "MIXED"] }),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("ai_tutor_messages_convo_idx").on(t.conversationId, t.createdAt)]);
 
 // ---------- RECOMMENDATIONS & STUDY PLAN ----------
 export const learningRecommendations = sqliteTable("learning_recommendations", {
@@ -501,7 +565,7 @@ export const learningRecommendations = sqliteTable("learning_recommendations", {
   status: text("status", { enum: ["ACTIVE", "DISMISSED", "COMPLETED"] }).notNull().default("ACTIVE"),
   source: text("source"),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (t) => [index("learning_recommendations_user_idx").on(t.userId, t.status)]);
 
 export const studyPlans = sqliteTable("study_plans", {
   id: text("id").primaryKey(),
@@ -555,7 +619,7 @@ export const mockTestAttempts = sqliteTable("mock_test_attempts", {
   overallBand: real("overall_band"),
   startedAt: text("started_at").default(sql`(CURRENT_TIMESTAMP)`),
   completedAt: text("completed_at"),
-});
+}, (t) => [index("mock_test_attempts_user_idx").on(t.userId, t.status)]);
 
 // ---------- PLATFORM: OPERATIONS & SECURITY ----------
 export const auditLogs = sqliteTable(
@@ -692,7 +756,7 @@ export const subscriptions = sqliteTable(
     planId: text("plan_id").notNull(),
     status: text("status", { enum: ["ACTIVE", "EXPIRED", "CANCELLED"] }).notNull().default("ACTIVE"),
     /** How it started: an administrator granted it, a payment completed, or a promotion. */
-    source: text("source", { enum: ["ADMIN", "PAYMENT", "PROMO"] }).notNull().default("ADMIN"),
+    source: text("source", { enum: ["ADMIN", "PAYMENT", "PROMO", "REFERRAL"] }).notNull().default("ADMIN"),
     startedAt: text("started_at").notNull(),
     /** ISO time the paid period ends. Access stops after this moment. */
     currentPeriodEnd: text("current_period_end").notNull(),
@@ -962,6 +1026,241 @@ export const assignmentSubmissions = sqliteTable(
     gradedBy: text("graded_by"),
   },
   (t) => [uniqueIndex("assignment_submissions_uq").on(t.assignmentId, t.studentId), index("assignment_submissions_student_idx").on(t.studentId)]
+);
+
+// ---------- GROWTH: REFERRALS, CHALLENGES, CERTIFICATES ----------
+export const referralCodes = sqliteTable("referral_codes", {
+  userId: text("user_id").primaryKey(),
+  code: text("code").notNull().unique(),
+  createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+/** What happened to a referral link: someone clicked it, registered through it, or made their first paid purchase. */
+export const referralEvents = sqliteTable(
+  "referral_events",
+  {
+    id: text("id").primaryKey(),
+    referrerId: text("referrer_id").notNull(),
+    code: text("code").notNull(),
+    type: text("type", { enum: ["CLICK", "REGISTRATION", "PURCHASE"] }).notNull(),
+    /** The new member (for registrations and purchases). */
+    refereeId: text("referee_id"),
+    /** A one-way fingerprint of the visitor, only used to count one click per person per day. */
+    visitorHash: text("visitor_hash"),
+    transactionId: text("transaction_id"),
+    /** Days of plan given to the referrer for a purchase. */
+    rewardDays: integer("reward_days"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("referral_events_referee_uq").on(t.type, t.refereeId), index("referral_events_referrer_idx").on(t.referrerId, t.type), index("referral_events_visitor_idx").on(t.code, t.visitorHash)]
+);
+
+/** A challenge a student completed in one period (for example the weekly "5 lessons" challenge in week 39). Once only. */
+export const challengeCompletions = sqliteTable(
+  "challenge_completions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    /** Period and challenge together, e.g. "W2026-39:LESSONS". */
+    challengeKey: text("challenge_key").notNull(),
+    rewardXp: integer("reward_xp").notNull().default(0),
+    completedAt: text("completed_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("challenge_completions_uq").on(t.userId, t.challengeKey)]
+);
+
+/** A certificate for finishing a course. Its code is what the public verification page checks. */
+export const certificates = sqliteTable(
+  "certificates",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    userId: text("user_id").notNull(),
+    courseId: text("course_id").notNull(),
+    /** Names as they were when it was issued, so later edits do not change what the certificate says. */
+    studentName: text("student_name").notNull(),
+    courseTitle: text("course_title").notNull(),
+    issuedAt: text("issued_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    revokedAt: text("revoked_at"),
+    revokedReason: text("revoked_reason"),
+  },
+  (t) => [uniqueIndex("certificates_user_course_uq").on(t.userId, t.courseId)]
+);
+
+// ---------- COMMUNITY ----------
+/** The topics a post can belong to (English, IELTS, Speaking...). Edited by administrators. */
+export const communityCategories = sqliteTable("community_categories", {
+  id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  order: integer("order").notNull().default(0),
+  /** Untick to stop new posts being added to it; existing posts stay. */
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+});
+
+export const communityPosts = sqliteTable(
+  "community_posts",
+  {
+    id: text("id").primaryKey(),
+    authorId: text("author_id").notNull(),
+    /** A discussion, or a question that can have one accepted answer. */
+    kind: text("kind", { enum: ["DISCUSSION", "QUESTION"] }).notNull().default("DISCUSSION"),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    /** The topic the post belongs to. Empty only on posts made before categories existed. */
+    categoryId: text("category_id"),
+    tags: text("tags", { mode: "json" }).$type<string[]>().default([]),
+    /** HIDDEN posts are only visible to moderators (hidden by one, or automatically after several reports). */
+    status: text("status", { enum: ["PUBLISHED", "HIDDEN"] }).notNull().default("PUBLISHED"),
+    pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
+    /** For questions: the comment that answered it. */
+    acceptedCommentId: text("accepted_comment_id"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    lastActivityAt: text("last_activity_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("community_posts_activity_idx").on(t.status, t.lastActivityAt), index("community_posts_author_idx").on(t.authorId)]
+);
+
+export const communityComments = sqliteTable(
+  "community_comments",
+  {
+    id: text("id").primaryKey(),
+    postId: text("post_id").notNull(),
+    authorId: text("author_id").notNull(),
+    body: text("body").notNull(),
+    status: text("status", { enum: ["PUBLISHED", "HIDDEN"] }).notNull().default("PUBLISHED"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("community_comments_post_idx").on(t.postId), index("community_comments_author_idx").on(t.authorId)]
+);
+
+export const communityLikes = sqliteTable(
+  "community_likes",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    targetType: text("target_type", { enum: ["POST", "COMMENT"] }).notNull(),
+    targetId: text("target_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("community_likes_uq").on(t.userId, t.targetType, t.targetId), index("community_likes_target_idx").on(t.targetType, t.targetId)]
+);
+
+export const communityReports = sqliteTable(
+  "community_reports",
+  {
+    id: text("id").primaryKey(),
+    reporterId: text("reporter_id").notNull(),
+    targetType: text("target_type", { enum: ["POST", "COMMENT"] }).notNull(),
+    targetId: text("target_id").notNull(),
+    reason: text("reason", { enum: ["SPAM", "ABUSE", "OFF_TOPIC", "OTHER"] }).notNull(),
+    details: text("details"),
+    status: text("status", { enum: ["OPEN", "ACTIONED", "DISMISSED"] }).notNull().default("OPEN"),
+    resolvedBy: text("resolved_by"),
+    resolvedAt: text("resolved_at"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("community_reports_uq").on(t.reporterId, t.targetType, t.targetId), index("community_reports_status_idx").on(t.status), index("community_reports_target_idx").on(t.targetType, t.targetId)]
+);
+
+/** Students barred from posting, commenting, liking and hosting rooms. Reading still works. */
+export const communityBans = sqliteTable("community_bans", {
+  userId: text("user_id").primaryKey(),
+  reason: text("reason"),
+  bannedBy: text("banned_by").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+// ---------- SPEAKING ROOMS (peer practice) ----------
+/** A scheduled group speaking-practice room hosted by a student or teacher. Video happens at the meeting link. */
+export const speakingRooms = sqliteTable(
+  "speaking_rooms",
+  {
+    id: text("id").primaryKey(),
+    hostId: text("host_id").notNull(),
+    title: text("title").notNull(),
+    /** What kind of practice it is, so people can find the right room. */
+    roomType: text("room_type", { enum: ["BEGINNER", "INTERMEDIATE", "ADVANCED", "IELTS_SPEAKING", "DEBATE", "JOB_INTERVIEW"] }).notNull().default("BEGINNER"),
+    topic: text("topic"),
+    /** Suggested level so people practise with others at a similar stage (an IELTS band, e.g. 6). */
+    targetBand: real("target_band"),
+    startsAt: text("starts_at").notNull(),
+    durationMinutes: integer("duration_minutes").notNull().default(30),
+    capacity: integer("capacity").notNull().default(4),
+    provider: text("provider").notNull().default("JITSI"),
+    meetingUrl: text("meeting_url").notNull(),
+    status: text("status", { enum: ["SCHEDULED", "CANCELLED"] }).notNull().default("SCHEDULED"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("speaking_rooms_start_idx").on(t.status, t.startsAt), index("speaking_rooms_host_idx").on(t.hostId)]
+);
+
+export const speakingRoomMembers = sqliteTable(
+  "speaking_room_members",
+  {
+    id: text("id").primaryKey(),
+    roomId: text("room_id").notNull(),
+    userId: text("user_id").notNull(),
+    joinedAt: text("joined_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("speaking_room_members_uq").on(t.roomId, t.userId), index("speaking_room_members_user_idx").on(t.userId)]
+);
+
+// ---------- LIVE CLASSES ----------
+/** A scheduled online class for a batch (or everyone enrolled in a course). Video happens at the meeting link. */
+export const liveClasses = sqliteTable(
+  "live_classes",
+  {
+    id: text("id").primaryKey(),
+    teacherId: text("teacher_id").notNull(),
+    /** Who it is for: every member of the batch, or every student enrolled in the course (at least one is set). */
+    batchId: text("batch_id"),
+    courseId: text("course_id"),
+    title: text("title").notNull(),
+    description: text("description"),
+    /** Start time in UTC (ISO). Shown to everyone in Bangladesh time. */
+    startsAt: text("starts_at").notNull(),
+    durationMinutes: integer("duration_minutes").notNull().default(60),
+    /** Which MeetingProvider made or checked the link ("MANUAL" or "JITSI"). */
+    provider: text("provider").notNull().default("MANUAL"),
+    meetingUrl: text("meeting_url").notNull(),
+    status: text("status", { enum: ["SCHEDULED", "CANCELLED"] }).notNull().default("SCHEDULED"),
+    cancelReason: text("cancel_reason"),
+    recordingUrl: text("recording_url"),
+    /** When each reminder went out, so it goes out once. */
+    dayReminderSentAt: text("day_reminder_sent_at"),
+    hourReminderSentAt: text("hour_reminder_sent_at"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("live_classes_teacher_idx").on(t.teacherId, t.startsAt), index("live_classes_batch_idx").on(t.batchId), index("live_classes_course_idx").on(t.courseId), index("live_classes_start_idx").on(t.startsAt)]
+);
+
+export const classAttendance = sqliteTable(
+  "class_attendance",
+  {
+    id: text("id").primaryKey(),
+    classId: text("class_id").notNull(),
+    studentId: text("student_id").notNull(),
+    status: text("status", { enum: ["PRESENT", "LATE", "ABSENT"] }).notNull(),
+    /** Set when the student used the Join button. */
+    joinedAt: text("joined_at"),
+    /** "SELF" when the Join button recorded it, "TEACHER" when the teacher set or changed it. */
+    markedBy: text("marked_by", { enum: ["SELF", "TEACHER"] }).notNull().default("SELF"),
+  },
+  (t) => [uniqueIndex("class_attendance_uq").on(t.classId, t.studentId), index("class_attendance_student_idx").on(t.studentId)]
+);
+
+export const classMaterials = sqliteTable(
+  "class_materials",
+  {
+    id: text("id").primaryKey(),
+    classId: text("class_id").notNull(),
+    title: text("title").notNull(),
+    url: text("url").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("class_materials_class_idx").on(t.classId)]
 );
 
 // ---------- HUMAN REVIEWS: WRITING AND SPEAKING ----------

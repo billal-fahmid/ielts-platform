@@ -4,6 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { id as newId } from "@/lib/utils";
 import { notify } from "@/lib/services/notifications";
 import { getUserProgressForCourse } from "@/lib/services/courses";
+import { issueCertificate } from "@/lib/services/certificates";
 
 export type Enrollment = typeof enrollments.$inferSelect;
 
@@ -80,6 +81,12 @@ export function syncCourseCompletion(userId: string, courseId: string): boolean 
   db.update(enrollments).set({ status: "COMPLETED", completedAt: new Date().toISOString() }).where(eq(enrollments.id, e.id)).run();
   const course = db.select().from(courses).where(eq(courses.id, courseId)).get();
   if (course) notify(userId, { type: "COURSE", title: `Course completed: ${course.title}`, body: "Well done! You finished every lesson.", url: `/dashboard/courses/${course.slug}`, email: true });
+  // Finishing a course earns a certificate with a public verification code.
+  try {
+    issueCertificate(userId, courseId);
+  } catch {
+    /* it is issued the next time the student opens their certificates */
+  }
   return true;
 }
 

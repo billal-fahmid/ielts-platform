@@ -31,7 +31,16 @@ import {
   assignments,
   assignmentSubmissions,
   speakingSlots,
+  liveClasses,
+  communityPosts,
+  communityComments,
+  speakingRooms,
+  speakingRoomMembers,
+  studyCountries,
+  learningResources,
+  communityCategories,
 } from "./schema";
+import { resourceDefs, studyCountryDefs } from "./study-abroad-content";
 import { careerCourses } from "./career-content";
 import bcrypt from "bcryptjs";
 import { readFileSync } from "node:fs";
@@ -42,10 +51,32 @@ function uid() {
 }
 
 async function main() {
+  // The seed erases every table first. On a live site that would delete real students and payments.
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PRODUCTION_SEED !== "yes") {
+    console.error("Refusing to seed: this erases all data. On a brand-new empty database only, set ALLOW_PRODUCTION_SEED=yes to load the starter content.");
+    process.exit(1);
+  }
   console.log("Seeding database...");
 
   // ---------- clear existing (idempotent dev seed) ----------
   const tables = [
+    "community_categories",
+    "study_countries",
+    "learning_resources",
+    "certificates",
+    "challenge_completions",
+    "referral_events",
+    "referral_codes",
+    "speaking_room_members",
+    "speaking_rooms",
+    "community_bans",
+    "community_reports",
+    "community_likes",
+    "community_comments",
+    "community_posts",
+    "class_materials",
+    "class_attendance",
+    "live_classes",
     "speaking_slots",
     "writing_reviews",
     "assignment_submissions",
@@ -1213,6 +1244,10 @@ The library also offers free Wi-Fi, a children's story hour every Saturday morni
     ])
     .run();
 
+  // ---------- STUDY ABROAD AND RESOURCES ----------
+  studyCountryDefs.forEach((c, i) => db.insert(studyCountries).values({ id: uid(), ...c, order: i }).run());
+  resourceDefs.forEach((r, i) => db.insert(learningResources).values({ id: uid(), ...r, order: i }).run());
+
   // ---------- DEMO ENROLMENTS & NOTIFICATIONS ----------
   const enrolledCourse = db.select().from(courses).all().find((c) => c.slug === "beginner-english");
   if (enrolledCourse) db.insert(enrollments).values({ id: uid(), userId: studentId, courseId: enrolledCourse.id }).run();
@@ -1283,6 +1318,34 @@ The library also offers free Wi-Fi, a children's story hour every Saturday morni
       { id: uid(), teacherId, startsAt: slotAt(3, 16), durationMinutes: 30, meetingUrl: "https://example.com/replace-with-your-meeting-link" },
     ])
     .run();
+
+  // ---------- DEMO LIVE CLASS (a free Jitsi room, tomorrow evening Bangladesh time) ----------
+  const classId = uid();
+  const classStart = new Date(Date.parse(new Date(Date.now() + 86_400_000).toISOString().slice(0, 10) + "T00:00:00+06:00") + 19 * 3_600_000).toISOString();
+  db.insert(liveClasses)
+    .values({ id: classId, teacherId, batchId, title: "IELTS Speaking Part 2 workshop", description: "Cue-card strategies and live practice.", startsAt: classStart, durationMinutes: 60, provider: "JITSI", meetingUrl: "https://meet.jit.si/BanglaEnglish-" + classId.replace(/-/g, "") })
+    .run();
+
+  // ---------- DEMO COMMUNITY AND SPEAKING ROOM ----------
+  const categoryDefs = [["english", "English", "Grammar, vocabulary and everyday English"], ["ielts", "IELTS", "Test tips, strategy and band scores"], ["speaking", "Speaking", "Fluency, pronunciation and practice partners"], ["writing", "Writing", "Essays, letters and feedback"], ["study-abroad", "Study Abroad", "Universities, visas and scholarships"], ["career", "Career", "Interviews, CVs and workplace English"]] as const;
+  const categoryIds: Record<string, string> = {};
+  categoryDefs.forEach(([slug, name, description], i) => {
+    categoryIds[slug] = uid();
+    db.insert(communityCategories).values({ id: categoryIds[slug], slug, name, description, order: i }).run();
+  });
+  const welcomeId = uid();
+  const questionId = uid();
+  db.insert(communityPosts)
+    .values([
+      { id: welcomeId, authorId: teacherId, kind: "DISCUSSION", categoryId: categoryIds.english, title: "Welcome to the BanglaEnglish community", body: "Ask questions, share what is working for you, and help each other. Be kind, write in your own words, and report anything that breaks the rules.", tags: ["welcome"], pinned: true },
+      { id: questionId, authorId: studentId, kind: "QUESTION", categoryId: categoryIds.ielts, title: "How do I stop running out of time in Reading?", body: "I always finish only two passages. Any tips for skimming faster?", tags: ["ielts-reading", "time"] },
+    ])
+    .run();
+  db.insert(communityComments).values({ id: uid(), postId: questionId, authorId: teacherId, body: "Spend about 20 minutes per passage, read the questions first, and do not re-read the whole text for every question." }).run();
+  const roomId = uid();
+  const roomStart = new Date(Date.parse(new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10) + "T00:00:00+06:00") + 20 * 3_600_000).toISOString();
+  db.insert(speakingRooms).values({ id: roomId, hostId: teacherId, roomType: "IELTS_SPEAKING", title: "Friendly Part 2 practice", topic: "Describe a place you would like to visit", targetBand: 6, startsAt: roomStart, durationMinutes: 45, capacity: 5, provider: "JITSI", meetingUrl: "https://meet.jit.si/BanglaEnglish-" + roomId.replace(/-/g, "") }).run();
+  db.insert(speakingRoomMembers).values({ id: uid(), roomId, userId: teacherId }).run();
 
   console.log("Seed complete.");
   console.log("Demo accounts:");

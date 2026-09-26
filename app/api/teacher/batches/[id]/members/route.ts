@@ -20,9 +20,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const studentId = new URL(req.url).searchParams.get("studentId");
-  if (!studentId) return NextResponse.json({ error: "Choose a student to remove." }, { status: 400 });
   return teacherRoute(req, { path: `/api/teacher/batches/${id}/members` }, ({ user }) => {
+    const studentId = new URL(req.url).searchParams.get("studentId");
+    if (!studentId) throw new TeachingError("Choose a student to remove.", 400);
     removeMember(user.id, id, studentId);
     audit({ actorId: user.id, actorRole: user.role, action: "batch.remove_member", entityType: "batches", entityId: id, metadata: { studentId } }, req);
   });

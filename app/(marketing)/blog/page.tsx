@@ -4,11 +4,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { listBlogPosts } from "@/lib/services/marketing";
 import { formatDate } from "@/lib/utils";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Blog & Resources — BanglaEnglish" };
+export const metadata: Metadata = pageMetadata({ title: "Blog & Resources — BanglaEnglish", description: "Practical advice from our teachers on grammar, vocabulary and IELTS strategy.", path: "/blog" });
 
-export default function BlogPage() {
-  const posts = listBlogPosts();
+const PAGE_SIZE = 9;
+
+export default async function BlogPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const all = listBlogPosts();
+  const pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  const raw = Number((await searchParams).page);
+  const page = Number.isInteger(raw) && raw >= 1 ? Math.min(raw, pages) : 1;
+  const posts = all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div>
@@ -37,6 +44,23 @@ export default function BlogPage() {
             </Link>
           ))}
         </div>
+        {pages > 1 && (
+          <nav aria-label="Pages" className="mt-10 flex items-center justify-center gap-3 text-sm">
+            {page > 1 && (
+              <Link href={`/blog?page=${page - 1}`} rel="prev" className="rounded-full border border-border px-4 py-1.5 text-ink-soft hover:text-ink">
+                Newer
+              </Link>
+            )}
+            <span className="text-ink-soft">
+              Page {page} of {pages}
+            </span>
+            {page < pages && (
+              <Link href={`/blog?page=${page + 1}`} rel="next" className="rounded-full border border-border px-4 py-1.5 text-ink-soft hover:text-ink">
+                Older
+              </Link>
+            )}
+          </nav>
+        )}
       </section>
     </div>
   );

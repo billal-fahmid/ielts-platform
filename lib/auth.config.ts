@@ -4,8 +4,12 @@ import type { NextAuthConfig } from "next-auth";
 // The full config in lib/auth.ts extends this with the Credentials provider.
 export const authConfig: NextAuthConfig = {
   session: { strategy: "jwt" },
+  // In production Auth.js refuses requests unless the host is trusted. When the site address is configured (AUTH_URL or
+  // NEXTAUTH_URL) the configured address is used instead of the request's Host header, so trusting it is safe.
+  trustHost: Boolean(process.env.AUTH_URL || process.env.NEXTAUTH_URL || process.env.AUTH_TRUST_HOST === "true"),
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   providers: [],
   callbacks: {

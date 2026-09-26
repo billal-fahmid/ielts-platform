@@ -1,9 +1,10 @@
+import { pageMetadata } from "@/lib/seo";
 import { Metadata } from "next";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { listTeachers } from "@/lib/services/marketing";
 
-export const metadata: Metadata = { title: "Teachers — BanglaEnglish" };
+export const metadata: Metadata = pageMetadata({ title: "Teachers — BanglaEnglish", description: "Meet the teachers who review your writing, run live classes and coach your speaking.", path: "/teachers" });
 
 export default function TeachersPage() {
   const teachers = listTeachers();

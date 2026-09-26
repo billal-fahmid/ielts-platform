@@ -19,15 +19,23 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BandDial } from "@/components/marketing/band-dial";
 import { listCourses } from "@/lib/services/courses";
-import { listTeachers, listTestimonials } from "@/lib/services/marketing";
+import { listTeachers, listTestimonials, publicStats } from "@/lib/services/marketing";
+import { JsonLd } from "@/components/seo/json-ld";
+import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 
 export default function HomePage() {
   const courses = listCourses().slice(0, 4);
   const teachers = listTeachers().slice(0, 4);
   const testimonials = listTestimonials();
+  const stats = publicStats();
+  const n = (v: number) => v.toLocaleString("en-US");
 
   return (
     <div>
+      <JsonLd data={{ "@context": "https://schema.org", "@graph": [
+        { "@type": "EducationalOrganization", name: SITE_NAME, url: absoluteUrl("/"), description: SITE_DESCRIPTION, areaServed: "BD" },
+        { "@type": "WebSite", name: SITE_NAME, url: absoluteUrl("/"), potentialAction: { "@type": "SearchAction", target: absoluteUrl("/search?q={search_term_string}"), "query-input": "required name=search_term_string" } },
+      ] }} />
       {/* HERO */}
       <section className="border-b border-border bg-surface">
         <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-24">
@@ -49,9 +57,9 @@ export default function HomePage() {
               </LinkButton>
             </div>
             <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-sm text-ink-soft">
-              <Stat value="12,000+" label="students" />
-              <Stat value="4.8/5" label="average rating" />
-              <Stat value="6" label="skill-focused courses" />
+              <Stat value={n(stats.courses)} label="courses" />
+              <Stat value={n(stats.lessons)} label="lessons" />
+              <Stat value={n(stats.teachers)} label="teachers" />
             </div>
           </div>
           <div className="flex justify-center lg:justify-end">
@@ -154,9 +162,9 @@ export default function HomePage() {
       {/* STATS */}
       <section className="container-page py-16">
         <div className="grid gap-6 rounded-2xl border border-border bg-primary-dark p-10 text-white sm:grid-cols-3">
-          <StatBlock icon={Users} value="12,000+" label="Active students" />
-          <StatBlock icon={TrendingUp} value="1.2 avg" label="Band score improvement" />
-          <StatBlock icon={Award} value="94%" label="Course completion rate" />
+          <StatBlock icon={Users} value={n(stats.students)} label="Students learning with us" />
+          <StatBlock icon={TrendingUp} value={n(stats.lessons)} label="Lessons across all courses" />
+          <StatBlock icon={Award} value={n(stats.courses)} label="Courses, from beginner to IELTS" />
         </div>
       </section>
 

@@ -8,6 +8,7 @@ import { ownedCourseIds } from "@/lib/services/teacher-content";
 import { scorePercent } from "@/lib/teaching/rules";
 import { myReviews, queueCount } from "@/lib/services/writing-reviews";
 import { upcomingSessionCount } from "@/lib/services/speaking-sessions";
+import { upcomingClassCount } from "@/lib/services/live-classes";
 
 const dayString = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 const avg = (nums: number[]) => (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
@@ -142,6 +143,7 @@ export function teacherOverview(teacherId: string) {
     reviewsWaiting: queueCount(),
     reviewsInProgress: myReviews(teacherId).filter((r) => r.status === "IN_REVIEW").length,
     upcomingSessions: upcomingSessionCount(teacherId),
+    upcomingClasses: upcomingClassCount(teacherId),
     needsGrading: recent.map((r) => ({ submissionId: r.id, assignmentId: r.assignmentId, assignmentTitle: titles.get(r.assignmentId) ?? "Assignment", student: names.get(r.studentId)?.name ?? "Student", submittedAt: r.submittedAt })),
   };
 }

@@ -2,8 +2,10 @@ import { Metadata } from "next";
 import { RegisterForm } from "./register-form";
 import { GraduationCap } from "lucide-react";
 import Link from "next/link";
+import { GoogleButton } from "@/components/auth/google-button";
+import { googleEnabled } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Create account — BanglaEnglish" };
+export const metadata: Metadata = { title: "Create account — BanglaEnglish", alternates: { canonical: "/register" } };
 
 export default function RegisterPage() {
   return (
@@ -16,6 +18,7 @@ export default function RegisterPage() {
           <h1 className="font-display text-2xl text-ink">Start learning free</h1>
           <p className="mt-1 text-sm text-ink-soft">Create your account and take your placement test.</p>
         </div>
+        {googleEnabled() && <GoogleButton callbackUrl="/onboarding" label="Sign up with Google" />}
         <RegisterForm />
         <p className="mt-6 text-center text-sm text-ink-soft">
           Already have an account?{" "}

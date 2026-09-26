@@ -30,6 +30,16 @@ import {
   Wallet,
   Ticket,
   Landmark,
+  MessagesSquare,
+  Award as AwardIcon,
+  Gift,
+  Newspaper,
+  Globe,
+  Library,
+  Quote,
+  Contact,
+  Tags,
+  BarChart3,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -38,6 +48,7 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 
 const links: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3, adminOnly: true },
   { href: "/admin/courses", label: "Courses", icon: BookOpen },
   { href: "/admin/modules", label: "Modules", icon: Shapes },
   { href: "/admin/lessons", label: "Lessons", icon: Layers },
@@ -62,6 +73,17 @@ const links: NavItem[] = [
   { href: "/admin/payments", label: "Payments", icon: Wallet, adminOnly: true },
   { href: "/admin/coupons", label: "Coupons", icon: Ticket, adminOnly: true },
   { href: "/admin/paymentAccounts", label: "Payment accounts", icon: Landmark, adminOnly: true },
+  { section: "Website content", adminOnly: true },
+  { href: "/admin/blogPosts", label: "Blog posts", icon: Newspaper, adminOnly: true },
+  { href: "/admin/studyCountries", label: "Study abroad", icon: Globe, adminOnly: true },
+  { href: "/admin/learningResources", label: "Resources", icon: Library, adminOnly: true },
+  { href: "/admin/testimonials", label: "Testimonials", icon: Quote, adminOnly: true },
+  { href: "/admin/teachers", label: "Team profiles", icon: Contact, adminOnly: true },
+  { section: "Community", adminOnly: true },
+  { href: "/admin/community", label: "Moderation", icon: MessagesSquare, adminOnly: true },
+  { href: "/admin/communityCategories", label: "Categories", icon: Tags, adminOnly: true },
+  { href: "/admin/certificates", label: "Certificates", icon: AwardIcon, adminOnly: true },
+  { href: "/admin/referrals", label: "Referrals", icon: Gift, adminOnly: true },
   { section: "System", adminOnly: true },
   { href: "/admin/notifications", label: "Announcements", icon: Megaphone, adminOnly: true },
   { href: "/admin/email-outbox", label: "Email log", icon: Mail, adminOnly: true },

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Metadata } from "next";
+import { JsonLd } from "@/components/seo/json-ld";
+import { absoluteUrl, pageMetadata, SITE_NAME } from "@/lib/seo";
 import { auth } from "@/lib/auth";
 import { getCourseFullTree, getCourseBySlug } from "@/lib/services/courses";
 import { isEnrolled } from "@/lib/services/enrollment";
@@ -15,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const course = getCourseBySlug(slug);
   if (!course || !course.published) return { title: "Course not found — BanglaEnglish" };
-  return { title: `${course.title} — BanglaEnglish`, description: course.description };
+  return pageMetadata({ title: `${course.title} — BanglaEnglish`, description: course.description, path: `/courses/${course.slug}` });
 }
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -31,6 +33,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
 
   return (
     <div>
+      <JsonLd data={{ "@context": "https://schema.org", "@type": "Course", name: course.title, description: course.description, url: absoluteUrl(`/courses/${course.slug}`), provider: { "@type": "Organization", name: SITE_NAME, sameAs: absoluteUrl("/") }, inLanguage: "en", numberOfCredits: undefined, hasCourseInstance: { "@type": "CourseInstance", courseMode: "online", courseWorkload: `${totalLessons} lessons` } }} />
       <section className="border-b border-border bg-surface py-14">
         <div className="container-page max-w-2xl">
           <div className="flex items-center gap-2">

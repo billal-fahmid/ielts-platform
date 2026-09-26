@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Bell, GraduationCap } from "lucide-react";
 import { requirePageRole } from "@/lib/security/guards";
 import { unreadCount } from "@/lib/services/notifications";
+import { sendDueReminders } from "@/lib/services/live-classes";
 import { TeacherMobileMenu, TeacherSidebar } from "@/components/teacher/sidebar";
 
 export const metadata = { title: "Teaching — BanglaEnglish" };
@@ -11,6 +12,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   const user = await requirePageRole(["TEACHER", "ADMIN"]);
   // Administrators manage the whole platform from the admin console; the teaching area is for teachers' own classes.
   if (user.role === "ADMIN") redirect("/admin");
+  sendDueReminders();
   const unread = unreadCount(user.id);
 
   return (

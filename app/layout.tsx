@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { SessionProvider } from "@/components/session-provider";
 import { auth } from "@/lib/auth";
+import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/seo";
 
 const spectral = Spectral({
   variable: "--font-spectral",
@@ -24,9 +25,12 @@ const jbmono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bangla English — Learn English & Ace IELTS",
-  description:
-    "A modern English learning and IELTS preparation platform built for students in Bangladesh.",
+  metadataBase: new URL(siteUrl()),
+  title: { default: "BanglaEnglish — Learn English & Ace IELTS", template: "%s" },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: { type: "website", siteName: SITE_NAME, title: "BanglaEnglish — Learn English & Ace IELTS", description: SITE_DESCRIPTION, locale: "en_BD" },
+  twitter: { card: "summary", title: "BanglaEnglish — Learn English & Ace IELTS", description: SITE_DESCRIPTION },
 };
 
 export default async function RootLayout({

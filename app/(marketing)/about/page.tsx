@@ -1,9 +1,10 @@
+import { pageMetadata } from "@/lib/seo";
 import { Metadata } from "next";
 import { Target, Users, BookOpen, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
 
-export const metadata: Metadata = { title: "About — BanglaEnglish" };
+export const metadata: Metadata = pageMetadata({ title: "About — BanglaEnglish", description: "Our mission: make world-class English and IELTS preparation accessible to every student in Bangladesh.", path: "/about" });
 
 export default function AboutPage() {
   return (
@@ -27,7 +28,7 @@ export default function AboutPage() {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: Target, title: "Our mission", desc: "Make world-class English and IELTS prep accessible to every student in Bangladesh." },
-            { icon: Users, title: "Our students", desc: "12,000+ learners across every district, from complete beginners to Band 8 candidates." },
+            { icon: Users, title: "Our students", desc: "Learners from complete beginners to IELTS candidates, studying at their own pace from anywhere in Bangladesh." },
             { icon: BookOpen, title: "Our method", desc: "Structured courses, spaced-repetition vocabulary, and real exam-style practice." },
             { icon: Heart, title: "Our values", desc: "Clarity over jargon, consistency over cramming, and encouragement over pressure." },
           ].map((v) => (

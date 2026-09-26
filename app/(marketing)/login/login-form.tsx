@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
+import { safeRedirectPath } from "@/lib/security/redirect";
 import { useState } from "react";
 
 export function LoginForm() {
@@ -31,8 +32,8 @@ export function LoginForm() {
       return;
     }
     push("Welcome back!", "success");
-    router.push(params.get("callbackUrl") || "/dashboard");
-    router.refresh();
+    // A full page load, not router.push: the router may hold a prefetched "please log in" redirect for this page.
+    window.location.assign(safeRedirectPath(params.get("callbackUrl")));
   };
 
   return (

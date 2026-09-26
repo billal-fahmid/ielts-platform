@@ -3,11 +3,13 @@ import { Metadata } from "next";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ContactForm } from "./contact-form";
+import { contactInfo, pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Contact — BanglaEnglish" };
+export const metadata: Metadata = pageMetadata({ title: "Contact — BanglaEnglish", description: "Questions about courses, pricing or your account? Get in touch with the BanglaEnglish team.", path: "/contact" });
 
 export default async function ContactPage({ searchParams }: { searchParams: Promise<{ plan?: string; period?: string }> }) {
   const { plan, period } = await searchParams;
+  const info = contactInfo();
   const planRow = plan ? getPlanByCode(plan.toUpperCase().slice(0, 20)) : undefined;
   const defaultMessage = planRow && planRow.rank > 0 ? `Hello, I would like to upgrade to the ${planRow.name} plan (${period === "yearly" ? "yearly" : "monthly"}). Please tell me how to pay.` : "";
   return (
@@ -20,9 +22,9 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
           business day.
         </p>
         <div className="mt-8 flex flex-col gap-4">
-          <ContactRow icon={Mail} label="hello@banglaenglish.app" />
-          <ContactRow icon={Phone} label="+880 1XXX-XXXXXX" />
-          <ContactRow icon={MapPin} label="Mymensingh, Bangladesh" />
+          {info.email && <ContactRow icon={Mail} label={info.email} />}
+          {info.phone && <ContactRow icon={Phone} label={info.phone} />}
+          <ContactRow icon={MapPin} label={info.address} />
         </div>
       </div>
       <Card className="p-6 sm:p-8">

@@ -11,7 +11,9 @@ export function BandDial({ value = 7, size = 280 }: { value?: number; size?: num
 
   const polar = (angleDeg: number, r: number) => {
     const rad = (angleDeg * Math.PI) / 180;
-    return { x: center + r * Math.cos(rad), y: center + r * Math.sin(rad) };
+    // Rounded: Math.cos/sin can differ in the last digit between the server and the browser, which breaks hydration.
+    const round = (n: number) => Math.round(n * 100) / 100;
+    return { x: round(center + r * Math.cos(rad)), y: round(center + r * Math.sin(rad)) };
   };
 
   const arcPath = (a1: number, a2: number, r: number) => {
